@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../../DOIT-ESP32-DKV1-PIO-0"
+		},
+		{
+			"name": "DOIT-ESP32-DKV1-PIO-1",
+			"path": ".."
+		}
+	],
+    "settings": {
+        "files.associations": {
+            "string_view": "cpp",
+            "regex": "cpp"
+        }
+    }
+}

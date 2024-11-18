@@ -1,0 +1,46 @@
+#ifndef DC_ESP_SERVER_H
+#define DC_ESP_SERVER_H
+
+#include <WiFi.h>
+#include <AsyncTCP.h> // https://github.com/me-no-dev/AsyncTCP
+#include <ESPAsyncWebServer.h> // https://github.com/me-no-dev/ESPAsyncWebServer
+#include <PubSubClient.h> // https://github.com/knolleary/pubsubclient/archive/master.zip
+#include "LittleFS.h"
+
+
+/* FILE SYSTEM */
+#define FS_TEST_FILE "/fs_test.txt"
+extern void setupFileSystem();
+
+
+/* WIFI */
+extern void setupWiFi(const char* ssid, const char* password);
+
+
+/* WEBSERVER / WEBSOCKET */
+#define WS_PORT 80
+#define WS_ROOT "/ws"
+extern AsyncWebServer webServer;
+extern AsyncWebSocket ws;
+
+typedef void (*wsMsgHandleFunc)(uint8_t*);
+extern void runWSServer(wsMsgHandleFunc func);
+extern void serviceClients();
+extern void sendWSString(String str);
+
+
+/* MQTT */
+extern PubSubClient mqttClient;
+typedef void (*mqttCallBackFunc) (char* topic, byte* message, unsigned int length);
+extern void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCallBackFunc func);
+
+typedef void (*mqttCMDFunc) (String msg);
+typedef struct {String topic; mqttCMDFunc func;} mqttSubscription;
+
+extern void serviceMQTTClient(mqttSubscription* subs, uint32_t length);
+extern void reconnectMqttClient(mqttSubscription* subs, uint32_t length);
+extern void publishMQTTMessage(String topic, String msg);
+extern String mqttMessageToString(byte* msg, unsigned int length);
+
+
+#endif /* DC_ESP_SERVER_H */
