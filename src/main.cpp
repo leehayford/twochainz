@@ -26,7 +26,7 @@ void testState() {
     sta.debugPrintValues();
     sta.doorClosed = true;
     sta.breakOn = false;
-    sta.armContact = true;
+    sta.fistContact = true;
     sta.magnetOn = true;
     sta.cyclesCompleted = 1;
     sta.currentHeight = 23.5;
@@ -38,6 +38,10 @@ void testState() {
     sta.parseJSONToState(json);
     sta.debugPrintValues();
 }
+
+long update = 3000;
+unsigned long prev = 0;
+unsigned long now = 0;
 
 void setup() {
 
@@ -56,12 +60,24 @@ void setup() {
 
     
     /* TODO: REMOVE AFTER DEBUG */
-    testConfig();
-    testState();
+    // testConfig();
+    // testState();
+    motorEnable();
     /* TODO: REMOVE AFTER DEBUG */
 
+    prev = millis() + update;
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+    // now = millis();
+    // if (now > prev + update) {
+    //     prev = now;
+    if (sta.send == true) {
+        sta.send = false;
+        sta.debugPrintValues();
+    }
+    
+    /* TODO: REMOVE AFTER DEBUG */
+    motorBackNForth();
+    /* TODO: REMOVE AFTER DEBUG */
 }

@@ -31,7 +31,7 @@ void setupWiFi(const char* ssid, const char* password) {
         delay(1000);
         Serial.print(".");
     }
-    Serial.printf("\nConnected..! Got IP: %s\n", WiFi.localIP().toString());
+    Serial.printf("\nConnected..! Got IP: %s\n\n", WiFi.localIP().toString());
 }
 
 

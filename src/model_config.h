@@ -43,7 +43,7 @@ public:
     void debugPrintValues() {
         Serial.printf("Config.debugPrintValues() :\n");
         Serial.printf("Cycles: %d\n", cycles);
-        Serial.printf("Height: %f\n", height);
+        Serial.printf("Height: %f\n\n", height);
     }
 };
 
