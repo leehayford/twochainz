@@ -1,13 +1,14 @@
 #include <Arduino.h>
 #include "dc_secret.h" // not included in git repo; contains 'SECRET_XXXXXXX' values
 #include "dc_esp_server.h"
-#include "model_config.h"
-#include "model_state.h"
+
+#include "x_models.h"
+#include "x_io.h"
 
 #define SERIAL_BAUD 115200
 #define SERIAL_DELAY 500
 
-Config cfg;
+/* TODO: REMOVE AFTER DEBUG */
 void testConfig() {
     cfg.debugPrintValues();
     cfg.cycles = 27;
@@ -20,13 +21,13 @@ void testConfig() {
     cfg.debugPrintValues();
 }
 
-State sta;
+/* TODO: REMOVE AFTER DEBUG */
 void testState() {
     sta.debugPrintValues();
-    sta.isDoorClosed = true;
-    sta.isBrakeOn = false;
-    sta.isArmAtHammer = true;
-    sta.isMagnetOn = true;
+    sta.doorClosed = true;
+    sta.breakOn = false;
+    sta.armContact = true;
+    sta.magnetOn = true;
     sta.cyclesCompleted = 1;
     sta.currentHeight = 23.5;
     sta.setStatus("State altered");
@@ -47,14 +48,17 @@ void setup() {
 
     setupWiFi(SECRET_WIFI_SSID, SECRET_WIFI_PW);
 
-    // setupIO();
+    setupIO();
 
     // setupMQTTClient((mqttCallBackFunc)&mqttCallBack);
 
     // runWSServer((wsMsgHandleFunc)&wsMessageHandler);
 
+    
+    /* TODO: REMOVE AFTER DEBUG */
     testConfig();
     testState();
+    /* TODO: REMOVE AFTER DEBUG */
 
 }
 

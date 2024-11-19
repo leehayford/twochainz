@@ -10,7 +10,6 @@
 #define JSON_OBJECT_SERIALIZED_LENGTH 512
 #define JSON_FIELD_STRING_LENGTH 50
 
-/*************************************************************************************************/
 /* JSON PARSING FUNCTIONS ************************************************************************/
 
 // Returns true if c is a whitespace character
@@ -32,7 +31,6 @@ extern void jsonParseFloat(const char* jsonString, const char* key, float& desti
 extern void jsonParseBool(const char* jsonString, const char* key, bool& destination);
 
 
-/*************************************************************************************************/
 /* JSON SERIALIZING FUNCTIONS ********************************************************************/
 
 // Initialize json output string with '{' 
@@ -53,6 +51,5 @@ extern void jsonSerializeFloat(char* json, const char* key, float value);
 // Serialize a string value to JSON
 extern void jsonSerializeString(char* json, const char* key, const char* value);
 
-/*************************************************************************************************/
 
 #endif /* DC_JSON_H */

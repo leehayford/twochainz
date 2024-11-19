@@ -1,10 +1,7 @@
 #include "dc_json.h"
 
 
-/*************************************************************************************************/
 /* JSON PARSING FUNCTIONS ************************************************************************/
-
-// Returns true if c is a whitespace character
 bool jsonParseSkipWhitespace(char c) {
     if (c == ' ' || c == '\n' || c == '\t' || c == '\r') {
         return true;
@@ -12,7 +9,6 @@ bool jsonParseSkipWhitespace(char c) {
     return false;
 }
 
-// Returns a pointer to the first character after the 'key'
 const char* jsonParseSkipToValue(const char* jsonString, const char* key) {
     // Skip past the key and the colon
     const char* start = strstr(jsonString, key) + strlen(key); 
@@ -23,7 +19,6 @@ const char* jsonParseSkipToValue(const char* jsonString, const char* key) {
     return start;
 }
 
-// Helper function for extracting string values
 void jsonParseString(const char* jsonString, const char* key, char* destination, size_t maxLen) {
     
     const char* start = jsonParseSkipToValue(jsonString, key);
@@ -40,7 +35,6 @@ void jsonParseString(const char* jsonString, const char* key, char* destination,
     }
 }
 
-// Helper function for extracting integer values
 void jsonParseInt(const char* jsonString, const char* key, int& destination) {
     
     const char* start = jsonParseSkipToValue(jsonString, key);
@@ -50,7 +44,6 @@ void jsonParseInt(const char* jsonString, const char* key, int& destination) {
     }
 }
 
-// Helper function for extracting float values
 void jsonParseFloat(const char* jsonString, const char* key, float& destination) {
     
     const char* start = jsonParseSkipToValue(jsonString, key);
@@ -60,7 +53,6 @@ void jsonParseFloat(const char* jsonString, const char* key, float& destination)
     }
 }
 
-// Helper function for extracting boolean values
 void jsonParseBool(const char* jsonString, const char* key, bool& destination) {
     
     const char* start = jsonParseSkipToValue(jsonString, key);
@@ -71,15 +63,11 @@ void jsonParseBool(const char* jsonString, const char* key, bool& destination) {
 }
 
 
-/*************************************************************************************************/
 /* JSON SERIALIZING FUNCTIONS ********************************************************************/
-
-// Initialize json output string with '{' 
 void jsonSerializeStart(char* json) {
     strcpy(json,"{\n");
 }
 
-// Finalize json output string with '}'; removes trailing ',' if present
 void jsonSerializeEnd(char* json) {
     size_t len = strlen(json);
     if (len > 2 && json[len - 2] == ',') {
@@ -91,14 +79,12 @@ void jsonSerializeEnd(char* json) {
     
 }
 
-// Serialize a boolean value to JSON
 void jsonSerializeBool(char* json, const char* key, bool value) {
     strcat(json, key);
     strcat(json, value ? "true" : "false");
     strcat(json, ",\n");
 }
 
-// Serialize an integer value to JSON
 void jsonSerializeInt(char* json, const char* key, int value) {
     char buffer[20]; // Temporary buffer for integer
     strcat(json, key);
@@ -107,7 +93,6 @@ void jsonSerializeInt(char* json, const char* key, int value) {
     strcat(json, ",\n");
 }
 
-// Serialize a float value to JSON
 void jsonSerializeFloat(char* json, const char* key, float value) {
     char buffer[20]; // Temporary buffer for float
     strcat(json, key);
@@ -116,7 +101,6 @@ void jsonSerializeFloat(char* json, const char* key, float value) {
     strcat(json, ",\n");
 }
 
-// Serialize a string value to JSON
 void jsonSerializeString(char* json, const char* key, const char* value) {
     strcat(json, key);
     strcat(json, "\"");
@@ -125,5 +109,3 @@ void jsonSerializeString(char* json, const char* key, const char* value) {
     strcat(json, ",\n");
 }
 
-
-/*************************************************************************************************/
