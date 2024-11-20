@@ -69,12 +69,10 @@ void setup() {
 }
 
 void loop() {
-    // now = millis();
-    // if (now > prev + update) {
-    //     prev = now;
+
     if (sta.send == true) {
-        sta.send = false;
         sta.debugPrintValues();
+        sta.send = false;
     }
     
     /* TODO: REMOVE AFTER DEBUG */

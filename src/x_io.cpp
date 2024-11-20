@@ -15,9 +15,9 @@ int itrCheck[6];
 int itrNow;
 
 void debounce(int itrPin) { 
-    if (itrCheck[itrPin] == 0) {
+    if (itrCheck[itrPin] == 0) { 
         itrCheck[itrPin] = millis() + ITR_DEBOUNCE_ALARM_INC_mSEC; 
-    }
+    } 
 }
 void IRAM_ATTR eStopInturrupt() { debounce(CHK_ESTOP); }
 void IRAM_ATTR doorInturrupt() { debounce(CHK_DOOR); }
@@ -26,8 +26,11 @@ void IRAM_ATTR anvilInturrupt() { debounce(CHK_ANVIL); }
 void IRAM_ATTR topInturrupt() { debounce(CHK_TOP); }
 void IRAM_ATTR pressurelInturrupt() { debounce(CHK_PRESSURE); }
 
-void itrHandleEStopState() { sta.emergencyStop = !digitalRead(PIN_ITR_ESTOP); }
-// void itrHandleDoorState() { sta.setDoorClosed(!digitalRead(PIN_ITR_DOOR)); }
+void itrClearCheck(int itrPin) {
+        itrCheck[itrPin] = 0;
+        sta.send = true;
+}
+void itrHandleEStopState() { sta.emergencyStop = !digitalRead(PIN_ITR_ESTOP); } // void itrHandleDoorState() { sta.setDoorClosed(!digitalRead(PIN_ITR_DOOR)); }
 void itrHandleDoorState() { sta.doorClosed = !digitalRead(PIN_ITR_DOOR); }
 void itrHandleFistState() { sta.fistContact = !digitalRead(PIN_ITR_FIST); }
 void itrHandleAnvilState() { sta.anvilContact = !digitalRead(PIN_ITR_ANVIL); }
@@ -38,39 +41,33 @@ void IRAM_ATTR onDebounceTimer() {
     itrNow = millis();
 
     if (itrCheck[CHK_ESTOP] > 0 && itrCheck[CHK_ESTOP] <= itrNow) { 
-        itrCheck[CHK_ESTOP] = 0;
         itrHandleEStopState(); 
-        sta.send = true;
+        itrClearCheck(CHK_ESTOP);
     }
 
     if (itrCheck[CHK_DOOR] > 0 && itrCheck[CHK_DOOR] <= itrNow) { 
-        itrCheck[CHK_DOOR] = 0;
         itrHandleDoorState(); 
-        sta.send = true;
+        itrClearCheck(CHK_DOOR);
     }
     
     if (itrCheck[CHK_FIST] > 0 && itrCheck[CHK_FIST] <= itrNow) { 
-        itrCheck[CHK_FIST] = 0;
         itrHandleFistState();
-        sta.send = true;
+        itrClearCheck(CHK_FIST);
     }
     
     if (itrCheck[CHK_ANVIL] > 0 && itrCheck[CHK_ANVIL] <= itrNow) { 
-        itrCheck[CHK_ANVIL] = 0;
         itrHandleAnvilState(); 
-        sta.send = true;
+        itrClearCheck(CHK_ANVIL);
     }
     
     if (itrCheck[CHK_TOP] > 0 && itrCheck[CHK_TOP] <= itrNow) { 
-        itrCheck[CHK_TOP] = 0;
         itrHandleTopState(); 
-        sta.send = true;
+        itrClearCheck(CHK_TOP);
     }
     
     if (itrCheck[CHK_PRESSURE] > 0 && itrCheck[CHK_PRESSURE] <= itrNow) { 
-        itrCheck[CHK_PRESSURE] = 0;
         itrHandlePressureState(); 
-        sta.send = true;
+        itrClearCheck(CHK_PRESSURE);
     }
 
 }
@@ -122,8 +119,7 @@ void setupInterrupts() {
 /* RELAY CONTROL ************************************************************************************/
 
 void brakeOn() { digitalWrite(PIN_OUT_BRAKE, BREAK_ON); }
-void brakeOff() {
-    /* OK TO RELESE BREAK:
+void brakeOff() { /* TODO: OK TO RELESE BREAK:
         
         1. WE ARE DROPPING THE HAMMER ON PURPOSE
             sta.doorClosed
@@ -139,9 +135,7 @@ void brakeOff() {
 }
 
 void magnetOff() { digitalWrite(PIN_OUT_MAGNET, MAGNET_OFF); }
-void magnetOn() {
-    
-    /* OK TO ENABLE MAGNET:
+void magnetOn() { /* TODO: OK TO ENABLE MAGNET:
         
         1. sta.fistContact && sta.brakeOn 
 
@@ -156,6 +150,7 @@ void setupRelayControl() {
     pinMode(PIN_OUT_MAGNET, OUTPUT);
     magnetOff();
 }
+
 /* RELAY CONTROL *** END ***************************************************************************/
 
 
@@ -181,6 +176,11 @@ void moveToHome() {
 }
 void moveToHammer() {}
 void moveToSwingHeight() {}
+void emergencyStop() {
+    brakeOn();
+    magnetOff();
+    motorStop();
+}
 
 void setupMotor() {
 
@@ -229,12 +229,6 @@ void motorBackNForth() {
 
 /* MOTOR CONTROL *** END *************************************************************************/
 
-
-void emergencyStop() {
-    brakeOn();
-    magnetOff();
-    motorStop();
-}
 
 void setupIO() {
     setupInterrupts();
