@@ -96,28 +96,47 @@ void sendWSString(String str) {
 /* MQTT */
 WiFiClient mqttWifiClient;
 PubSubClient mqttClient(mqttWifiClient);
+/* MQTT call back function */
+// void mqttCallBack(char* topic, byte* message, unsigned int length) {
+
+//     String msgTopic = String(topic);
+//     Serial.println("Message arrived on topic: " + msgTopic);
+
+//     // String str = mqttMessageToString(message, length);
+//     // Serial.println("Message content: " + str);
+
+//     for (mqttSubscription sub : subs) {
+//         if (msgTopic == sub.topic) {
+//             sub.func(str);
+//             break;
+//         }
+//     }
+// }
+
 void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCallBackFunc func) {
+    mqttClient.setBufferSize(MQTT_PUB_BUFFER_SIZE);
     mqttClient.setServer(mqttBrokerIP, mqttBrokerPort);
     mqttClient.setCallback(func);
 }
 
-void serviceMQTTClient(mqttSubscription* subs, uint32_t length) {
+void serviceMQTTClient(const char* user, const char* pw, mqttSubscription* subs, uint32_t length) {
     if (!mqttClient.connected()) {
-        reconnectMqttClient(subs, length);
+        reconnectMqttClient(user, pw, subs, length);
     }
     mqttClient.loop();
 }
 
-void reconnectMqttClient(mqttSubscription* subs, uint32_t length) {
+void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* subs, uint32_t length) {
 
     while (!mqttClient.connected()) {
         Serial.print("Attempting MQTT connection...");
 
-        if (mqttClient.connect("DOIT-ESP32-DKV1-PIO-0", "nordicThingy", "run89ima9")) {
+        if (mqttClient.connect("DOIT-ESP32-DKV1-PIO-0", user, pw)) {
             Serial.println("MQTT conneted");
             for (uint32_t i = 0; i < length; i++) {
-                mqttClient.subscribe(subs[i].topic.c_str());
-                Serial.println("Subscribed to: " + subs[i].topic);
+                // mqttClient.subscribe(subs[i].topic.c_str());
+                mqttClient.subscribe(subs[i].topic);
+                Serial.printf("Subscribed to: %s\n", subs[i].topic);
             }
 
         } else {
@@ -131,21 +150,30 @@ void reconnectMqttClient(mqttSubscription* subs, uint32_t length) {
     }
 }
 
-void publishMQTTMessage(String topic, String msg) {
+void publishMQTTMessage(char* topic, char* msg) {
     
-    uint32_t length = msg.length();
+    uint32_t length = strlen(msg);
     byte* p = (byte*)malloc(length);
-    memcpy(p, msg.c_str(), length);
+    memcpy(p, msg, length);
 
-    mqttClient.publish(topic.c_str(), p, length);
+    // mqttClient.publish(topic.c_str(), p, length);
+    mqttClient.publish(topic, p, length);
     free(p);
 }
 
-String mqttMessageToString(byte* msg, unsigned int length) {
-    String str;
-    for (int i = 0; i < length; i++) {
-        str += (char)msg[i];
-    }
-    return str;
-}
+// String mqttMessageToString(byte* msg, unsigned int length) {
+//     String str;
+//     for (int i = 0; i < length; i++) {
+//         str += (char)msg[i];
+//     }
+//     return str;
+// }
 
+
+// char* mqttMessageToChars(byte* msg, unsigned int length) {
+//     char* str;
+//     for (int i = 0; i < length; i++) {
+//         str += (char)msg[i];
+//     }
+//     return str;
+// }

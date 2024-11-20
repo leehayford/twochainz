@@ -161,8 +161,8 @@ ESP_FlexyStepper motor;
 void setMotorSpeed(int stepsPerSec) {
     if (stepsPerSec > MOT_STEPS_PER_SEC_HIGH) { stepsPerSec = MOT_STEPS_PER_SEC_HIGH; }
     motor.setSpeedInStepsPerSecond(stepsPerSec);
-    motor.setAccelerationInStepsPerSecondPerSecond(stepsPerSec * MOT_STEPS_PER_SEC_ACCEL_X);
-    motor.setDecelerationInStepsPerSecondPerSecond(stepsPerSec * MOT_STEPS_PER_SEC_ACCEL_X);
+    motor.setAccelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
+    motor.setDecelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
 }
 
 void motorStop() { digitalWrite(PIN_OUT_MOT_EN, MOT_DISABLED); }
@@ -188,20 +188,8 @@ void setupMotor() {
     pinMode(PIN_OUT_MOT_DIR, OUTPUT);
     pinMode(PIN_OUT_MOT_EN, OUTPUT);
 
-    // digitalWrite(PIN_OUT_MOT_DIR, MOT_DIR_DOWN);
-    digitalWrite(PIN_OUT_MOT_EN, MOT_DISABLED);
+    motorStop();
     
-    /* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ 
-    #ifdef TEST_STEP_DRIVER
-    pinMode(PIN_OUT_MOT_MS1, OUTPUT);
-    pinMode(PIN_OUT_MOT_MS2, OUTPUT);
-    pinMode(PIN_OUT_MOT_MS3, OUTPUT);
-
-    digitalWrite(PIN_OUT_MOT_MS1, HIGH);
-    digitalWrite(PIN_OUT_MOT_MS2, HIGH);
-    digitalWrite(PIN_OUT_MOT_MS3, HIGH);
-    #endif /* TEST_STEP_DRIVER */
-
     motor.connectToPins(PIN_OUT_MOT_STEP, PIN_OUT_MOT_DIR);
     setMotorSpeed(MOT_STEPS_PER_SEC_LOW);
     motor.startAsService(MOT_SERVICE_CORE);
@@ -209,20 +197,27 @@ void setupMotor() {
 
 /* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ 
 #ifdef TEST_STEP_DRIVER
-int steps = 5000;
+int steps = 16000;
 void motorBackNForth() {
-    if (motor.getDistanceToTargetSigned() ==0) {
-        steps *= -1;
-        setMotorSpeed(MOT_STEPS_PER_SEC_HIGH);
-        delay(1000);
-        if (steps < 0) {
-            magnetOn();
-            brakeOff();
-        } else {
-            magnetOff();
-            brakeOn();
+    if(sta.cyclesCompleted < cfg.cycles) {
+        if(sta.cyclesCompleted == 0) {
+            steps = ( cfg.height / FIST_INCH_PER_REV ) * MOT_STEP_PER_REV;
         }
-        motor.setTargetPositionRelativeInSteps(steps);
+        if (motor.getDistanceToTargetSigned() == 0) {
+            steps *= -1;
+            motorEnable();
+            setMotorSpeed(MOT_STEPS_PER_SEC_HIGH);
+            delay(1000);
+            if (steps > 0) {
+                magnetOn();
+                brakeOff();
+            } else {
+                magnetOff();
+                brakeOn();
+                sta.cyclesCompleted++;
+            }
+            motor.setTargetPositionRelativeInSteps(steps);
+        }
     }
 }
 #endif /* TEST_STEP_DRIVER */

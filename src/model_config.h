@@ -10,10 +10,11 @@ protected:
     const char* heightKey = "\"height\":";
     
     char jsonOut[JSON_OBJECT_SERIALIZED_LENGTH];
-    
+
 public:
     int cycles;
     float height; 
+    int steps;
     
     Config(
         int cyc=0, 
@@ -23,12 +24,12 @@ public:
         height = ht;
     }
     
-    void parseJSONToConfig(const char* jsonString) {
+    void parseFromJSON(const char* jsonString) {
         jsonParseInt(jsonString, cyclesKey, cycles);
         jsonParseFloat(jsonString, heightKey, height);
     }
     
-    char* serializeConfigToJSON() {
+    char* serializeToJSON() {
         jsonSerializeStart(jsonOut);
         jsonSerializeInt(jsonOut, cyclesKey, cycles);
         jsonSerializeFloat(jsonOut, heightKey, height);
@@ -57,17 +58,17 @@ public:
         "height": 5.5
     })";
     
-    cfg.parseJSONToConfig(jsonString);
-    cfg.serializeConfigToJSON();
+    cfg.parseFromJSON(jsonString);
+    cfg.serializeToJSON();
     cfg.debugPrintJSON();
     
     cfg.cycles = 27;
     cfg.height = 38.75;
     
-    jsonString = cfg.serializeConfigToJSON();
+    jsonString = cfg.serializeToJSON();
     cfg.debugPrintJSON();
     
-    cfg.parseJSONToConfig(jsonString);
+    cfg.parseFromJSON(jsonString);
     cfg.debugPrintValues();
     
 */

@@ -65,16 +65,20 @@ void jsonParseBool(const char* jsonString, const char* key, bool& destination) {
 
 /* JSON SERIALIZING FUNCTIONS ********************************************************************/
 void jsonSerializeStart(char* json) {
-    strcpy(json,"{\n");
+    // strcpy(json,"{\n");
+    strcpy(json,"{");
 }
 
 void jsonSerializeEnd(char* json) {
     size_t len = strlen(json);
-    if (len > 2 && json[len - 2] == ',') {
-        json[len - 2] = '\n'; 
+    // if (len > 2 && json[len - 2] == ',') {
+    //     json[len - 2] = '\n'; 
+    //     json[len - 1] = '}'; 
+    if (len > 1 && json[len - 1] == ',') {
         json[len - 1] = '}'; 
     } else {
-        strncat(json, "\n}", strlen(json) - 1); // Append '}'
+        // strncat(json, "\n}", strlen(json) - 1); // Append '}'
+        strncat(json, "}", strlen(json) - 1); // Append '}'
     }
     
 }
@@ -82,7 +86,8 @@ void jsonSerializeEnd(char* json) {
 void jsonSerializeBool(char* json, const char* key, bool value) {
     strcat(json, key);
     strcat(json, value ? "true" : "false");
-    strcat(json, ",\n");
+    // strcat(json, ",\n");
+    strcat(json, ",");
 }
 
 void jsonSerializeInt(char* json, const char* key, int value) {
@@ -90,7 +95,8 @@ void jsonSerializeInt(char* json, const char* key, int value) {
     strcat(json, key);
     snprintf(buffer, sizeof(buffer), "%d", value);
     strcat(json, buffer);
-    strcat(json, ",\n");
+    // strcat(json, ",\n");
+    strcat(json, ",");
 }
 
 void jsonSerializeFloat(char* json, const char* key, float value) {
@@ -98,7 +104,8 @@ void jsonSerializeFloat(char* json, const char* key, float value) {
     strcat(json, key);
     snprintf(buffer, sizeof(buffer), "%.8f", value); // Limit to 8 decimal places
     strcat(json, buffer);
-    strcat(json, ",\n");
+    // strcat(json, ",\n");
+    strcat(json, ",");
 }
 
 void jsonSerializeString(char* json, const char* key, const char* value) {
@@ -106,6 +113,7 @@ void jsonSerializeString(char* json, const char* key, const char* value) {
     strcat(json, "\"");
     strcat(json, value);
     strcat(json, "\"");
-    strcat(json, ",\n");
+    // strcat(json, ",\n");
+    strcat(json, ",");
 }
 

@@ -91,7 +91,7 @@ public:
     }
     
     /* TODO: MAKE READ ONLY AFTER DEBUG */
-    void parseJSONToState(const char* jsonString) {
+    void parseFromJSON(const char* jsonString) {
         jsonParseBool(jsonString, doorClosedKey, doorClosed);
         jsonParseBool(jsonString, fistContactKey, fistContact);
         jsonParseBool(jsonString, anvilContactKey, anvilContact);
@@ -104,7 +104,7 @@ public:
         jsonParseString(jsonString, statusKey, status, sizeof(status));
     }
     
-    char* serializeStateToJSON() {
+    char* serializeToJSON() {
         jsonSerializeStart(jsonOut);
 
         jsonSerializeBool(jsonOut, emergencyStopKey, emergencyStop);

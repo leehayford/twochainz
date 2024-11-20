@@ -13,8 +13,8 @@
 #define PIN_ITR_PRESSURE 33 // Interrupt -> Input Pullup -> Low = Brake has pressure 
 
 /* INTERRUPT PINS -> DEBOUNCE */
-#define ITR_DEBOUNCE_ALARM_INC_mSEC 10
-#define ITR_DEBOUNCE_TIMER_PERIOD_uSEC 5000
+#define ITR_DEBOUNCE_ALARM_INC_mSEC 50
+#define ITR_DEBOUNCE_TIMER_PERIOD_uSEC 10000
 #define ITR_DEBOUNCE_TIMER 0 // Timer 0
 #define ITR_DEBOUNCE_PRESCALE 80 // Prescale of 80 = 1MHz for ESP32 DevKit V1
 #define ITR_DEBOUNCE_COUNT_UP true // Timer counts up as opposed to down
@@ -46,36 +46,25 @@
 
 /* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ #define TEST_STEP_DRIVER
 #ifdef TEST_STEP_DRIVER
-/* TEST MOTOR: 17HS19-2004S1 -> 1.8° Step Angle
-    TEST DRIVER:  A4988 -> Micro-step control pins
-    MS1     MS2     MS3
-        0           0           0       ->      Full step 1.8°
-        1           0           0       ->      Half step 0.9°
-        0           1           0       ->      Quarter step 0.45°
-        1           1           0       ->      Eighth step 0.225°
-        1           1           1       ->      Sixteenth step 0.1125° */
-#define PIN_OUT_MOT_MS1 12 // Stepper Control Control -> Output 
-#define PIN_OUT_MOT_MS2 14 // Stepper Control Control -> Output 
-#define PIN_OUT_MOT_MS3 27 // Stepper Control Control -> Output 
-
+extern int steps;
 extern void motorEnable();
 extern void motorBackNForth();
 #endif /* TEST_STEP_DRIVER */
 
-#define MOT_ENABLED HIGH
-#define MOT_DISABLED LOW
+#define MOT_ENABLED LOW
+#define MOT_DISABLED HIGH
 #define MOT_DIR_UP HIGH
 #define MOT_DIR_DOWN LOW
 #define MOT_STEPS_PER_SEC_LOW 500
-#define MOT_STEPS_PER_SEC_HIGH 5000
-#define MOT_STEPS_PER_SEC_ACCEL_X 2
+#define MOT_STEPS_PER_SEC_HIGH 4000
+#define MOT_STEPS_PER_SEC_ACCEL 2000
 #define MOT_SERVICE_CORE 0 // Which processor core onwhich to run the stepper service 
 
 #define MOT_STEP_PER_REV 2000
 
 #define FIST_INCH_PER_REV 6.000
 #define FIST_HEIGHT_MAX_INCH 48.000
-#define FIST_HEIGHT_MAX_STEP 96000 
+#define FIST_HEIGHT_MAX_STEP 16000 // = ( 48 / 6 ) * 2000
 
 /* MOTOR CONTROL *** END *************************************************************************/
 

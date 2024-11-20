@@ -4,44 +4,10 @@
 
 #include "x_models.h"
 #include "x_io.h"
+#include "x_mqtt.h"
 
 #define SERIAL_BAUD 115200
 #define SERIAL_DELAY 500
-
-/* TODO: REMOVE AFTER DEBUG */
-void testConfig() {
-    cfg.debugPrintValues();
-    cfg.cycles = 27;
-    cfg.height = 38.75;
-    
-    const char* json = cfg.serializeConfigToJSON();
-    cfg.debugPrintJSON();
-    
-    cfg.parseJSONToConfig(json);
-    cfg.debugPrintValues();
-}
-
-/* TODO: REMOVE AFTER DEBUG */
-void testState() {
-    sta.debugPrintValues();
-    sta.doorClosed = true;
-    sta.breakOn = false;
-    sta.fistContact = true;
-    sta.magnetOn = true;
-    sta.cyclesCompleted = 1;
-    sta.currentHeight = 23.5;
-    sta.setStatus("State altered");
-
-    const char* json = sta.serializeStateToJSON();
-    sta.debugPrintJSON();
-
-    sta.parseJSONToState(json);
-    sta.debugPrintValues();
-}
-
-long update = 3000;
-unsigned long prev = 0;
-unsigned long now = 0;
 
 void setup() {
 
@@ -54,27 +20,27 @@ void setup() {
 
     setupIO();
 
-    // setupMQTTClient((mqttCallBackFunc)&mqttCallBack);
+    setupXMQTT(SECRET_MQTT_BROKER, SECRET_MQTT_PORT);
 
     // runWSServer((wsMsgHandleFunc)&wsMessageHandler);
 
-    
-    /* TODO: REMOVE AFTER DEBUG */
-    // testConfig();
-    // testState();
-    motorEnable();
-    /* TODO: REMOVE AFTER DEBUG */
-
-    prev = millis() + update;
 }
 
+bool up = false;
 void loop() {
+
+    serviceMQTTClient(SECRET_MQTT_USER, SECRET_MQTT_PW, subs, N_SUBS);
 
     if (sta.send == true) {
         sta.debugPrintValues();
         sta.send = false;
     }
     
+    if (!up) {
+        publishMQTTMessage((char*)"esp32/sig/start", (char *)"Move Bitch! Get out the way!");
+        up = true;
+    }
+
     /* TODO: REMOVE AFTER DEBUG */
     motorBackNForth();
     /* TODO: REMOVE AFTER DEBUG */

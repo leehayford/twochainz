@@ -30,17 +30,18 @@ extern void sendWSString(String str);
 
 
 /* MQTT */
+#define MQTT_PUB_BUFFER_SIZE 1024
 extern PubSubClient mqttClient;
 typedef void (*mqttCallBackFunc) (char* topic, byte* message, unsigned int length);
 extern void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCallBackFunc func);
 
-typedef void (*mqttCMDFunc) (String msg);
-typedef struct {String topic; mqttCMDFunc func;} mqttSubscription;
+typedef void (*mqttCMDFunc) (char* msg);
+typedef struct {char* topic; mqttCMDFunc func;} mqttSubscription;
 
-extern void serviceMQTTClient(mqttSubscription* subs, uint32_t length);
-extern void reconnectMqttClient(mqttSubscription* subs, uint32_t length);
-extern void publishMQTTMessage(String topic, String msg);
-extern String mqttMessageToString(byte* msg, unsigned int length);
-
+extern void serviceMQTTClient(const char* user, const char* pw, mqttSubscription* subs, uint32_t length);
+extern void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* subs, uint32_t length);
+extern void publishMQTTMessage(char* topic, char* msg);
+// extern String mqttMessageToString(byte* msg, unsigned int length);
+// extern char* mqttMessageToChars(byte* msg, unsigned int length);
 
 #endif /* DC_ESP_SERVER_H */
