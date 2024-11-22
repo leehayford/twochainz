@@ -20,26 +20,19 @@ void setup() {
 
     setupIO();
 
-    setupXMQTT(SECRET_MQTT_BROKER, SECRET_MQTT_PORT);
+    setupMQTT_X(SECRET_MQTT_BROKER, SECRET_MQTT_PORT);
 
     // runWSServer((wsMsgHandleFunc)&wsMessageHandler);
+    sta.setStatus(STATUS_START);
+    pubs[PUB_STATE].flag = 1;
 
 }
 
-bool up = false;
 void loop() {
 
-    serviceMQTTClient(SECRET_MQTT_USER, SECRET_MQTT_PW, subs, N_SUBS);
+    serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
 
-    if (sta.send == true) {
-        sta.debugPrintValues();
-        sta.send = false;
-    }
-    
-    if (!up) {
-        publishMQTTMessage((char*)"esp32/sig/start", (char *)"Move Bitch! Get out the way!");
-        up = true;
-    }
+    checkIOAlarms();
 
     /* TODO: REMOVE AFTER DEBUG */
     motorBackNForth();

@@ -1,6 +1,5 @@
 #include "x_io.h"
-
-
+ 
 /* INTERRUPTS *****************************************************************************************/
 hw_timer_t *debounceTimer = NULL;
 enum itrCheckMap { 
@@ -14,10 +13,27 @@ enum itrCheckMap {
 int itrCheck[6]; 
 int itrNow;
 
-void debounce(int itrPin) { 
-    if (itrCheck[itrPin] == 0) { 
-        itrCheck[itrPin] = millis() + ITR_DEBOUNCE_ALARM_INC_mSEC; 
-    } 
+void itrClearCheck(int chk, int pin, bool *pinState) { 
+    if (itrCheck[chk] > 0 && itrCheck[chk] <= itrNow) { 
+        *pinState = !digitalRead(PIN_ITR_ESTOP); 
+        itrCheck[chk] = 0; 
+        // checkAlarmsFlag = 1;
+    }
+}
+void IRAM_ATTR onDebounceTimer() {
+    itrNow = millis();
+    itrClearCheck(CHK_ESTOP, PIN_ITR_ESTOP, &sta.emergencyStop);
+    itrClearCheck(CHK_DOOR, PIN_ITR_DOOR, &sta.doorClosed);
+    itrClearCheck(CHK_FIST, PIN_ITR_FIST, &sta.fistContact);
+    itrClearCheck(CHK_ANVIL, PIN_ITR_ANVIL, &sta.anvilContact);
+    itrClearCheck(CHK_TOP, PIN_ITR_TOP, &sta.topContact);
+    itrClearCheck(CHK_PRESSURE, PIN_ITR_PRESSURE, &sta.pressureContact);
+}
+
+void debounce(int chk) { 
+    if (itrCheck[chk] == 0) {
+        itrCheck[chk] = millis() + ITR_DEBOUNCE_ALARM_INC_mSEC; 
+    }
 }
 void IRAM_ATTR eStopInturrupt() { debounce(CHK_ESTOP); }
 void IRAM_ATTR doorInturrupt() { debounce(CHK_DOOR); }
@@ -26,53 +42,21 @@ void IRAM_ATTR anvilInturrupt() { debounce(CHK_ANVIL); }
 void IRAM_ATTR topInturrupt() { debounce(CHK_TOP); }
 void IRAM_ATTR pressurelInturrupt() { debounce(CHK_PRESSURE); }
 
-void itrClearCheck(int itrPin) {
-        itrCheck[itrPin] = 0;
-        sta.send = true;
-}
-void itrHandleEStopState() { sta.emergencyStop = !digitalRead(PIN_ITR_ESTOP); } // void itrHandleDoorState() { sta.setDoorClosed(!digitalRead(PIN_ITR_DOOR)); }
-void itrHandleDoorState() { sta.doorClosed = !digitalRead(PIN_ITR_DOOR); }
-void itrHandleFistState() { sta.fistContact = !digitalRead(PIN_ITR_FIST); }
-void itrHandleAnvilState() { sta.anvilContact = !digitalRead(PIN_ITR_ANVIL); }
-void itrHandleTopState() { sta.topContact = !digitalRead(PIN_ITR_TOP); }
-void itrHandlePressureState() { sta.pressureContact = !digitalRead(PIN_ITR_PRESSURE); }
+void setupInterrupts() {
+    pinMode(PIN_ITR_ESTOP, INPUT_PULLUP);
+    pinMode(PIN_ITR_DOOR, INPUT_PULLUP);
+    pinMode(PIN_ITR_FIST, INPUT_PULLUP);
+    pinMode(PIN_ITR_ANVIL, INPUT_PULLUP);
+    pinMode(PIN_ITR_TOP, INPUT_PULLUP);
+    pinMode(PIN_ITR_PRESSURE, INPUT_PULLUP);
 
-void IRAM_ATTR onDebounceTimer() {
-    itrNow = millis();
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_ESTOP), eStopInturrupt, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_DOOR), doorInturrupt, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_FIST), fistInturrupt, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_ANVIL), anvilInturrupt, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_TOP), topInturrupt, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_PRESSURE), pressurelInturrupt, CHANGE);
 
-    if (itrCheck[CHK_ESTOP] > 0 && itrCheck[CHK_ESTOP] <= itrNow) { 
-        itrHandleEStopState(); 
-        itrClearCheck(CHK_ESTOP);
-    }
-
-    if (itrCheck[CHK_DOOR] > 0 && itrCheck[CHK_DOOR] <= itrNow) { 
-        itrHandleDoorState(); 
-        itrClearCheck(CHK_DOOR);
-    }
-    
-    if (itrCheck[CHK_FIST] > 0 && itrCheck[CHK_FIST] <= itrNow) { 
-        itrHandleFistState();
-        itrClearCheck(CHK_FIST);
-    }
-    
-    if (itrCheck[CHK_ANVIL] > 0 && itrCheck[CHK_ANVIL] <= itrNow) { 
-        itrHandleAnvilState(); 
-        itrClearCheck(CHK_ANVIL);
-    }
-    
-    if (itrCheck[CHK_TOP] > 0 && itrCheck[CHK_TOP] <= itrNow) { 
-        itrHandleTopState(); 
-        itrClearCheck(CHK_TOP);
-    }
-    
-    if (itrCheck[CHK_PRESSURE] > 0 && itrCheck[CHK_PRESSURE] <= itrNow) { 
-        itrHandlePressureState(); 
-        itrClearCheck(CHK_PRESSURE);
-    }
-
-}
-void setupDebounceTimer() {
-    
     debounceTimer = timerBegin(
         ITR_DEBOUNCE_TIMER, 
         ITR_DEBOUNCE_PRESCALE, 
@@ -93,24 +77,6 @@ void setupDebounceTimer() {
 
     timerAlarmEnable(debounceTimer);
 }
-void setupInterrupts() {
-    pinMode(PIN_ITR_ESTOP, INPUT_PULLUP);
-    pinMode(PIN_ITR_DOOR, INPUT_PULLUP);
-    pinMode(PIN_ITR_FIST, INPUT_PULLUP);
-    pinMode(PIN_ITR_ANVIL, INPUT_PULLUP);
-    pinMode(PIN_ITR_TOP, INPUT_PULLUP);
-    pinMode(PIN_ITR_PRESSURE, INPUT_PULLUP);
-
-    // attachInterrupt(PIN_ITR_ESTOP, eStopInturrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_ESTOP), eStopInturrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_DOOR), doorInturrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_FIST), fistInturrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_ANVIL), anvilInturrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_TOP), topInturrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_PRESSURE), pressurelInturrupt, CHANGE);
-
-    setupDebounceTimer();
-}
 
 /* INTERRUPTS *** END ********************************************************************************/
 
@@ -118,29 +84,18 @@ void setupInterrupts() {
 
 /* RELAY CONTROL ************************************************************************************/
 
-void brakeOn() { digitalWrite(PIN_OUT_BRAKE, BREAK_ON); }
-void brakeOff() { /* TODO: OK TO RELESE BREAK:
-        
-        1. WE ARE DROPPING THE HAMMER ON PURPOSE
-            sta.doorClosed
-            &&
-            sta.fistContact 
-            && 
-            sta.magnetOn 
-            &&
-            sta.currentHeight == cfg.height
-
-    */
+void brakeOn() { /* TODO: OK TO APPLY BREAK */
+    digitalWrite(PIN_OUT_BRAKE, BREAK_ON); 
+}
+void brakeOff() { /* TODO: OK TO RELESE BREAK */
    digitalWrite(PIN_OUT_BRAKE, BREAK_OFF);
 }
 
-void magnetOff() { digitalWrite(PIN_OUT_MAGNET, MAGNET_OFF); }
-void magnetOn() { /* TODO: OK TO ENABLE MAGNET:
-        
-        1. sta.fistContact && sta.brakeOn 
-
-    */
+void magnetOn() { /* TODO: OK TO GRAB HAMMER */
    digitalWrite(PIN_OUT_MAGNET, MAGNET_ON);
+}
+void magnetOff() { /* TODO: OK TO DROP HAMMER */
+    digitalWrite(PIN_OUT_MAGNET, MAGNET_OFF); 
 }
 
 void setupRelayControl() {
@@ -168,20 +123,6 @@ void setMotorSpeed(int stepsPerSec) {
 void motorStop() { digitalWrite(PIN_OUT_MOT_EN, MOT_DISABLED); }
 void motorEnable() { digitalWrite(PIN_OUT_MOT_EN, MOT_ENABLED); }
 
-void moveToHome() {
-    /* If we asre not holding the hammer, 
-        go get it */
-
-
-}
-void moveToHammer() {}
-void moveToSwingHeight() {}
-void emergencyStop() {
-    brakeOn();
-    magnetOff();
-    motorStop();
-}
-
 void setupMotor() {
 
     pinMode(PIN_OUT_MOT_STEP, OUTPUT);
@@ -195,20 +136,29 @@ void setupMotor() {
     motor.startAsService(MOT_SERVICE_CORE);
 }
 
+void emergencyStop() { /* TODO: ORDER TO STOP DOING STUFF */ }
+void moveToHome() { /* TODO: OK TO MOVE DOWN */ }
+void moveToHammer() { /* TODO: OK TO MOVE DOWN */ }
+void moveToSwingHeight() { /* TODO: OK TO MOVE UP */ }
+
+/* MOTOR CONTROL *** END *************************************************************************/
+
+
 /* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ 
 #ifdef TEST_STEP_DRIVER
 int steps = 16000;
 void motorBackNForth() {
-    if(sta.cyclesCompleted < cfg.cycles) {
-        if(sta.cyclesCompleted == 0) {
-            steps = ( cfg.height / FIST_INCH_PER_REV ) * MOT_STEP_PER_REV;
-        }
+    if(sta.cyclesCompleted <= cfg.cycles) {
         if (motor.getDistanceToTargetSigned() == 0) {
-            steps *= -1;
+            if(sta.cyclesCompleted == 0) {
+                steps = ( cfg.height / FIST_INCH_PER_REV ) * MOT_STEP_PER_REV;
+            } else {
+                steps *= -1;
+            }
             motorEnable();
             setMotorSpeed(MOT_STEPS_PER_SEC_HIGH);
             delay(1000);
-            if (steps > 0) {
+            if (steps < 0) {
                 magnetOn();
                 brakeOff();
             } else {
@@ -221,9 +171,6 @@ void motorBackNForth() {
     }
 }
 #endif /* TEST_STEP_DRIVER */
-
-/* MOTOR CONTROL *** END *************************************************************************/
-
 
 void setupIO() {
     setupInterrupts();

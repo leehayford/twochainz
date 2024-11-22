@@ -44,7 +44,7 @@ public:
     float currentHeight;
     char status[JSON_FIELD_STRING_LENGTH];
 
-    bool send;
+    // bool send;
 // public:
     State(
         bool e_stop = false,        
@@ -77,7 +77,7 @@ public:
         currentHeight = height;
         strcpy(status, stat);
 
-        send = false;
+        // send = false;
     }
     
     void setDoorClosed(bool b) {

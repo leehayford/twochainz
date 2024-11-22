@@ -3,6 +3,8 @@
 
 #include <ESP_FlexyStepper.h>
 #include "x_models.h"
+#include "x_mqtt.h"
+
 
 /* INTERRUPTS *****************************************************************************************/
 #define PIN_ITR_ESTOP 4// Interrupt -> Input Pullup -> Low = Emergency stop button pressed
@@ -30,10 +32,14 @@
 #define PIN_OUT_BRAKE 23 // Relay Control -> Output -> Low = Brake is engaged
 #define BREAK_ON LOW
 #define BREAK_OFF HIGH
+extern void brakeOn();
+extern void brakeOff();
 
 #define PIN_OUT_MAGNET 22 // Relay Control -> Output -> Low = Brake is engaged
 #define MAGNET_ON HIGH
 #define MAGNET_OFF LOW
+extern void magnetOn();
+extern void magnetOff();
 
 /* RELAY CONTROL *** END ***************************************************************************/
 
@@ -47,7 +53,6 @@
 /* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ #define TEST_STEP_DRIVER
 #ifdef TEST_STEP_DRIVER
 extern int steps;
-extern void motorEnable();
 extern void motorBackNForth();
 #endif /* TEST_STEP_DRIVER */
 
@@ -56,7 +61,7 @@ extern void motorBackNForth();
 #define MOT_DIR_UP HIGH
 #define MOT_DIR_DOWN LOW
 #define MOT_STEPS_PER_SEC_LOW 500
-#define MOT_STEPS_PER_SEC_HIGH 4000
+#define MOT_STEPS_PER_SEC_HIGH 5000
 #define MOT_STEPS_PER_SEC_ACCEL 2000
 #define MOT_SERVICE_CORE 0 // Which processor core onwhich to run the stepper service 
 
@@ -66,10 +71,17 @@ extern void motorBackNForth();
 #define FIST_HEIGHT_MAX_INCH 48.000
 #define FIST_HEIGHT_MAX_STEP 16000 // = ( 48 / 6 ) * 2000
 
+extern void motorStop();
+extern void motorEnable();
+extern void setMotorSpeed(int stepsPerSec);
+
 /* MOTOR CONTROL *** END *************************************************************************/
 
 
 
+
+
 extern void setupIO();
+extern void checkIOAlarms();
 
 #endif /* X_IO_H */

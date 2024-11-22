@@ -96,22 +96,6 @@ void sendWSString(String str) {
 /* MQTT */
 WiFiClient mqttWifiClient;
 PubSubClient mqttClient(mqttWifiClient);
-/* MQTT call back function */
-// void mqttCallBack(char* topic, byte* message, unsigned int length) {
-
-//     String msgTopic = String(topic);
-//     Serial.println("Message arrived on topic: " + msgTopic);
-
-//     // String str = mqttMessageToString(message, length);
-//     // Serial.println("Message content: " + str);
-
-//     for (mqttSubscription sub : subs) {
-//         if (msgTopic == sub.topic) {
-//             sub.func(str);
-//             break;
-//         }
-//     }
-// }
 
 void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCallBackFunc func) {
     mqttClient.setBufferSize(MQTT_PUB_BUFFER_SIZE);
@@ -119,21 +103,21 @@ void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCallBackF
     mqttClient.setCallback(func);
 }
 
-void serviceMQTTClient(const char* user, const char* pw, mqttSubscription* subs, uint32_t length) {
+void serviceMQTTClient(const char* user, const char* pw, mqttSubscription* subs, int length) {
     if (!mqttClient.connected()) {
         reconnectMqttClient(user, pw, subs, length);
     }
     mqttClient.loop();
 }
 
-void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* subs, uint32_t length) {
+void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* subs, int length) {
 
     while (!mqttClient.connected()) {
         Serial.print("Attempting MQTT connection...");
 
-        if (mqttClient.connect("DOIT-ESP32-DKV1-PIO-0", user, pw)) {
+        if (mqttClient.connect("DOIT-ESP32-DKV1-PIO-1", user, pw)) {
             Serial.println("MQTT conneted");
-            for (uint32_t i = 0; i < length; i++) {
+            for (int i = 0; i < length; i++) {
                 // mqttClient.subscribe(subs[i].topic.c_str());
                 mqttClient.subscribe(subs[i].topic);
                 Serial.printf("Subscribed to: %s\n", subs[i].topic);
@@ -151,12 +135,9 @@ void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* sub
 }
 
 void publishMQTTMessage(char* topic, char* msg) {
-    
     uint32_t length = strlen(msg);
     byte* p = (byte*)malloc(length);
     memcpy(p, msg, length);
-
-    // mqttClient.publish(topic.c_str(), p, length);
     mqttClient.publish(topic, p, length);
     free(p);
 }
