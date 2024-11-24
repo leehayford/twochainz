@@ -14,10 +14,10 @@ int itrCheck[6];
 int itrNow;
 
 void itrClearCheck(int chk, int pin, bool *pinState) { 
-    if (itrCheck[chk] > 0 && itrCheck[chk] <= itrNow) { 
-        *pinState = !digitalRead(PIN_ITR_ESTOP); 
-        itrCheck[chk] = 0; 
-        // checkAlarmsFlag = 1;
+    if (itrCheck[chk] > 0 && itrCheck[chk] <= itrNow && *pinState != digitalRead(pin) ) {
+            *pinState = digitalRead(pin); 
+            itrCheck[chk] = 0; 
+            // checkAlarmsFlag = 1;
     }
 }
 void IRAM_ATTR onDebounceTimer() {
