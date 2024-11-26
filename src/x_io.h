@@ -35,7 +35,7 @@ typedef enum {
 #define ITR_DEBOUNCE_AUTORUN true // set 'autoreload' true to run continuously
 // #define ITR_DEBOUNCE_RUN_ONCE false // set 'autoreload' false to run once
 extern uint32_t g_ui32InterruptFlag;
-
+extern void checkAllLimits();
 
 /* INTERRUPTS *** END ********************************************************************************/
 
@@ -73,7 +73,7 @@ extern void motorBackNForth();
 #define MOT_DIR_UP HIGH
 #define MOT_DIR_DOWN LOW
 #define MOT_STEPS_PER_SEC_LOW 500
-#define MOT_STEPS_PER_SEC_HIGH 5000
+#define MOT_STEPS_PER_SEC_HIGH 4000
 #define MOT_STEPS_PER_SEC_ACCEL 2000
 #define MOT_SERVICE_CORE 0 // Which processor core onwhich to run the stepper service 
 
@@ -86,6 +86,7 @@ extern void motorBackNForth();
 extern void motorOff();
 extern void motorOn();
 extern void setMotorSpeed(int stepsPerSec);
+extern void setPositionAsZero();
 
 /* MOTOR CONTROL *** END *************************************************************************/
 

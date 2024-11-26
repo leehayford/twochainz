@@ -17,7 +17,7 @@ protected:
     const char* topLimitKey = "\"top_limit\":";
     const char* pressureKey = "\"pressure\":";
 
-    const char* brakeOnKey = "\"break_on\":";
+    const char* brakeOnKey = "\"brake_on\":";
     const char* magnetOnKey = "\"magnet_on\":";
     const char* motorOnkey = "\"motor_on\":";
 

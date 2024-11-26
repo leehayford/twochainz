@@ -6,6 +6,7 @@ mqttPublication m_mqttPubs[N_PUBS] = {
     {(char*)"esp32/sig/state", 0, (mqttPubFunc)&mqttPublishState},
     {(char*)"esp32/sig/config", 0, (mqttPubFunc)&mqttPublishConfig},
     {(char*)"esp32/sig/error", 0, (mqttPubFunc)&mqttPublishError},
+    {(char*)"esp32/sig/motpos", 0, (mqttPubFunc)&mqttPublishMotorPosition},
 };
 
 void setMQTTPubFlag(eMqttPubMap_t pub) {
@@ -22,6 +23,12 @@ void mqttPublishError() {
     publishMQTTMessage(m_mqttPubs[PUB_ERROR].topic, (char *)"ERROR: PLACE HOLDER..."); 
 }
 
+void mqttPublishMotorPosition() {
+    char buffer[20]; 
+    snprintf(buffer, sizeof(buffer), "%.8f", g_state.currentHeight);
+    publishMQTTMessage(m_mqttPubs[PUB_MOTPOS].topic, buffer);
+}
+
 
 /* MQTT Subscriptions *************************************************************************************/
 mqttSubscription m_mqttSubs[N_SUBS] = {
@@ -35,7 +42,11 @@ void mqttHandleCMDState(char* msg) {
 void mqttHandleCMDConfig(char* msg) {
     g_config.parseFromJSON(msg);
     g_state.cyclesCompleted = 0;
+    g_state.currentHeight = 0.0; /* TODO: CHECK / GO HOME FIRST */
+    setPositionAsZero();
     setMQTTPubFlag(PUB_CONFIG);
+    setMQTTPubFlag(PUB_STATE);
+    setMQTTPubFlag(PUB_MOTPOS);
 }
 
 

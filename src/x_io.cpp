@@ -1,6 +1,22 @@
 #include "x_io.h"
  
 /* INTERRUPTS *****************************************************************************************/
+void setItrState(uint8_t pin, bool *pbPinState, bool bInvert = false) {
+    *pbPinState = ( bInvert ? !(bool)digitalRead(pin) : (bool)digitalRead(pin) );
+}
+
+void checkAllLimits() {
+    setItrState(PIN_ITR_ESTOP, &g_state.eStop, ITR_INVERT_PIN_STATE);
+    setItrState(PIN_ITR_DOOR, &g_state.doorOpen);
+    setItrState(PIN_ITR_FIST, &g_state.fistLimit, ITR_INVERT_PIN_STATE);
+    setItrState(PIN_ITR_ANVIL, &g_state.anvilLimit, ITR_INVERT_PIN_STATE);
+    setItrState(PIN_ITR_TOP, &g_state.topLimit, ITR_INVERT_PIN_STATE);
+    setItrState(PIN_ITR_PRESSURE, &g_state.pressure, ITR_INVERT_PIN_STATE);
+    g_state.breakOn = !(bool)digitalRead(PIN_OUT_BRAKE);
+    g_state.magnetOn = (bool)digitalRead(PIN_OUT_MAGNET);
+    g_state.motorOn = !(bool)digitalRead(PIN_OUT_MOT_EN);
+}
+
 hw_timer_t *m_phwTimerDebounce = NULL;
 uint32_t m_aui32ItrCheck[ITR_PIN_COUNT]; 
 uint32_t m_ui32NowMillis;
@@ -14,7 +30,8 @@ void itrClearCheck(eItrCheckMap_t eChk, uint8_t pin, bool *pbPinState, bool bInv
     else {
         m_bPrevPinState = *pbPinState;
 
-        *pbPinState = ( bInvert ? !(bool)digitalRead(pin) : (bool)digitalRead(pin) );
+        setItrState(pin, pbPinState, bInvert);
+        // *pbPinState = ( bInvert ? !(bool)digitalRead(pin) : (bool)digitalRead(pin) );
         m_aui32ItrCheck[eChk] = 0; 
 
         if ( m_bPrevPinState != *pbPinState )
@@ -93,7 +110,7 @@ void setupInterrupts() {
 
 void switchBrake(int setting) {
     digitalWrite(PIN_OUT_BRAKE, setting); 
-    g_state.breakOn = (bool)digitalRead(PIN_OUT_BRAKE);
+    g_state.breakOn = !(bool)digitalRead(PIN_OUT_BRAKE);
 }
 void brakeOn() { switchBrake(BREAK_ON); }
 void brakeOff() { switchBrake(BREAK_OFF); }
@@ -127,14 +144,15 @@ void setMotorSpeed(int stepsPerSec) {
     m_motor.setDecelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
 }
 
+void setPositionAsZero() {
+    m_motor.setCurrentPositionInSteps(0);
+}
+
 void motorOn() { 
     digitalWrite(PIN_OUT_MOT_EN, MOT_ENABLED); 
-    g_state.motorOn = true;
 }
 void motorOff() { 
-    Serial.printf("\nmotorOff()");
     digitalWrite(PIN_OUT_MOT_EN, MOT_DISABLED); 
-    g_state.motorOn = false;
 }
 
 void setupMotor() {
@@ -142,12 +160,12 @@ void setupMotor() {
     pinMode(PIN_OUT_MOT_STEP, OUTPUT);
     pinMode(PIN_OUT_MOT_DIR, OUTPUT);
     pinMode(PIN_OUT_MOT_EN, OUTPUT);
-
-    motorOff();
     
     m_motor.connectToPins(PIN_OUT_MOT_STEP, PIN_OUT_MOT_DIR);
     setMotorSpeed(MOT_STEPS_PER_SEC_LOW);
     m_motor.startAsService(MOT_SERVICE_CORE);
+
+    motorOff();
 }
 
 // void emergencyStop() { /* TODO: ORDER TO STOP DOING STUFF */ }
@@ -160,29 +178,78 @@ void setupMotor() {
 
 /* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ 
 #ifdef TEST_STEP_DRIVER
-int32_t m_steps = 16000;
+int32_t m_steps = 0;
+int32_t m_i32MotorPosSteps = 0;
+int32_t m_i32LastPosUpdate = 0;
+int32_t m_i32PosUpdatePeriod_mSec = 500;
+void motorGetPosition() {
+    m_i32MotorPosSteps = m_motor.getCurrentPositionInSteps();
+    g_state.currentHeight = ((float)m_i32MotorPosSteps / MOT_STEP_PER_REV) * FIST_INCH_PER_REV;
+    m_i32LastPosUpdate = millis();
+    setMQTTPubFlag(PUB_MOTPOS);
+}
+ 
 void motorBackNForth() {
-    if(g_state.cyclesCompleted <= g_config.cycles) {
+    if(g_config.cycles == 0) 
+        return;
+
+    else if(g_state.cyclesCompleted <= g_config.cycles) {
+
+
         if (m_motor.getDistanceToTargetSigned() == 0) {
-            if(g_state.cyclesCompleted == 0) {
+
+            motorGetPosition();
+            
+            // Check we just completed a cycle
+            if(m_steps < 0) {
+                g_state.cyclesCompleted++;
+
+                // Check if we're done
+                if(g_state.cyclesCompleted == g_config.cycles) { // Serial.printf("\nDONE.");
+                    motorOff();
+                    g_state.setStatus((char*)"DONE");
+                    setMQTTPubFlag(PUB_STATE);
+                    g_config.cycles = 0;
+                    m_steps = 0;
+                    return;
+                }
+            }
+
+            // Check if we are starting the fist cycle
+            if(m_steps == 0) { // Serial.printf("\nBEGIN...");
                 m_steps = ( g_config.height / FIST_INCH_PER_REV ) * MOT_STEP_PER_REV;
+                setMotorSpeed(MOT_STEPS_PER_SEC_HIGH);
+                motorOn();
+                g_state.setStatus((char*)"BEGIN...");
+                setMQTTPubFlag(PUB_STATE);
             } else {
                 m_steps *= -1;
             }
-            motorOn();
-            setMotorSpeed(MOT_STEPS_PER_SEC_HIGH);
-            delay(1000);
-            if (m_steps < 0) {
+
+            if (m_steps > 0) { // Serial.printf("\nGOING UP");
+                g_state.setStatus((char*)"GOING UP");
                 magnetOn();
                 brakeOff();
-            } else {
+
+            } else { // Serial.printf("\nGOING DOWN");
+                g_state.setStatus((char*)"GOING DOWN");
                 magnetOff();
-                brakeOn();
-                g_state.cyclesCompleted++;
+                brakeOn(); 
             }
+            setMQTTPubFlag(PUB_STATE);
+
+            delay(100); // Serial.printf("\nm_steps: %d", m_steps);
             m_motor.setTargetPositionRelativeInSteps(m_steps);
-        }
+
+        } 
+
+        // Check if we should send a motor position update
+        if (m_i32LastPosUpdate <= (millis() + m_i32PosUpdatePeriod_mSec)) 
+            motorGetPosition();
+
+        
     }
+    
 }
 #endif /* TEST_STEP_DRIVER */
 

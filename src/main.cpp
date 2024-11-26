@@ -24,9 +24,10 @@ void setup() {
     setupMQTT_X(SECRET_MQTT_BROKER, SECRET_MQTT_PORT);
 
     // runWSServer((wsMsgHandleFunc)&wsMessageHandler);
+    checkAllLimits();
     g_state.setStatus(STATUS_START);
     setMQTTPubFlag(PUB_STATE);
-
+    setMQTTPubFlag(PUB_CONFIG);
 }
 
 void loop() {

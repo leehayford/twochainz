@@ -58,32 +58,42 @@ bool checkDoorAlarm() {
 
 void doEStop() {
     if ( !checkIsBrakeEngaged( ) ) 
-        brakeOn();
-
-    
+        brakeOn(); 
 }
- 
+
+
+
+int32_t m_i32LastAlarmCheck = 0; 
+int32_t m_i32AlarmCheckPeriod_mSec = 5000; 
 void checkIOAlarms() {
+    if(m_i32LastAlarmCheck + m_i32AlarmCheckPeriod_mSec < millis() ) {
+        checkAllLimits();
+        g_ui32InterruptFlag = 1;
+    }
     if (g_ui32InterruptFlag > 0) { // Serial.printf("\ng_ui32InterruptFlag: %d", g_ui32InterruptFlag);
         g_ui32InterruptFlag = 0;
 
-        if ( g_state.eStop ) {
-            brakeOn();
-            motorOff();
-            magnetOff();
-            statusUpdate(STATUS_ESTOP);
-            return;
-        }
+        // if ( g_state.eStop ) {
+        //     brakeOn();
+        //     motorOff();
+        //     magnetOff();
+        //     statusUpdate(STATUS_ESTOP);
+        //     return;
+        // }
 
-        if ( checkDoorAlarm( ) ) {
-            brakeOn();
-            motorOff();
-            if ( g_state.fistLimit )
-                magnetOn();
-            statusUpdate(STATUS_DOOR_OPEN);
-            return;
-        }
+        // if ( checkDoorAlarm( ) ) {
+        //     brakeOn();
+        //     motorOff();
+        //     if ( g_state.fistLimit )
+        //         magnetOn();
+        //     statusUpdate(STATUS_DOOR_OPEN);
+        //     return;
+        // }
 
-        statusUpdate(STATUS_READY);
+        if(g_config.cycles == 0 || g_state.cyclesCompleted == g_config.cycles){ 
+            statusUpdate(STATUS_READY);
+            setMQTTPubFlag(PUB_CONFIG);
+        }
+        m_i32LastAlarmCheck = millis();
     }
 }

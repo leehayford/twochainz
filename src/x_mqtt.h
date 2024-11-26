@@ -3,16 +3,19 @@
 
 #include "dc_esp_server.h"
 #include "x_models.h"
+#include "x_io.h"
 
 
-#define N_PUBS 3
+#define N_PUBS 4
 void mqttPublishState();
 void mqttPublishConfig();
 void mqttPublishError();
+void mqttPublishMotorPosition();
 typedef enum  {
     PUB_STATE = 0,
     PUB_CONFIG,
-    PUB_ERROR
+    PUB_ERROR,
+    PUB_MOTPOS
 } eMqttPubMap_t;
 extern void setMQTTPubFlag(eMqttPubMap_t pub);
 
