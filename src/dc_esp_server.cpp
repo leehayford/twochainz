@@ -36,14 +36,14 @@ void setupWiFi(const char* ssid, const char* password) {
 
 
 /* WEBSERVER / WEBSOCKET */
-AsyncWebServer webServer(WS_PORT);
-AsyncWebSocket ws(WS_ROOT);
-wsMsgHandleFunc wsMsgHandler;
+AsyncWebServer m_webServer(WS_PORT);
+AsyncWebSocket m_webSocket(WS_ROOT);
+wsMsgHandleFunc m_wsMsgHandler;
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
     AwsFrameInfo *info = (AwsFrameInfo*)arg;
     if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
         data[len] = 0;
-        (*wsMsgHandler)(data);
+        (*m_wsMsgHandler)(data);
     }
 }
 
@@ -66,66 +66,65 @@ void wsEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
 
 void runWSServer(wsMsgHandleFunc func) {
 
-    wsMsgHandler = func;
+    m_wsMsgHandler = func;
 
-    ws.onEvent(wsEventHandler);
-    webServer.addHandler(&ws);
+    m_webSocket.onEvent(wsEventHandler);
+    m_webServer.addHandler(&m_webSocket);
 
     // Route for root / web page
-    webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    m_webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         request->send(LittleFS, "/index.html", "text/html");
     });
 
     // Serve web page from file system
-    webServer.serveStatic("/", LittleFS, "/");
+    m_webServer.serveStatic("/", LittleFS, "/");
 
     // Start server
-    webServer.begin();
+    m_webServer.begin();
 }
 
 void serviceClients() {
-    ws.cleanupClients();
+    m_webSocket.cleanupClients();
 }
 
 void sendWSString(String str) {
-    ws.textAll(str);
+    m_webSocket.textAll(str);
 }
 
 
 
 /* MQTT */
-WiFiClient mqttWifiClient;
-PubSubClient mqttClient(mqttWifiClient);
+WiFiClient m_mqttWiFiClient;
+PubSubClient m_mqttClient(m_mqttWiFiClient);
 
 void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCallBackFunc func) {
-    mqttClient.setBufferSize(MQTT_PUB_BUFFER_SIZE);
-    mqttClient.setServer(mqttBrokerIP, mqttBrokerPort);
-    mqttClient.setCallback(func);
+    m_mqttClient.setBufferSize(MQTT_PUB_BUFFER_SIZE);
+    m_mqttClient.setServer(mqttBrokerIP, mqttBrokerPort);
+    m_mqttClient.setCallback(func);
 }
 
 void serviceMQTTClient(const char* user, const char* pw, mqttSubscription* subs, int length) {
-    if (!mqttClient.connected()) {
+    if (!m_mqttClient.connected()) {
         reconnectMqttClient(user, pw, subs, length);
     }
-    mqttClient.loop();
+    m_mqttClient.loop();
 }
 
 void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* subs, int length) {
 
-    while (!mqttClient.connected()) {
+    while (!m_mqttClient.connected()) {
         Serial.print("Attempting MQTT connection...");
 
-        if (mqttClient.connect("DOIT-ESP32-DKV1-PIO-1", user, pw)) {
+        if (m_mqttClient.connect("DOIT-ESP32-DKV1-PIO-1", user, pw)) {
             Serial.println("MQTT conneted");
             for (int i = 0; i < length; i++) {
-                // mqttClient.subscribe(subs[i].topic.c_str());
-                mqttClient.subscribe(subs[i].topic);
+                m_mqttClient.subscribe(subs[i].topic);
                 Serial.printf("Subscribed to: %s\n", subs[i].topic);
             }
 
         } else {
             Serial.print("failed, rc=");
-            Serial.print(mqttClient.state());
+            Serial.print(m_mqttClient.state());
             Serial.println(" try again in 5 seconds");
             // Wait 5 seconds before retrying
             delay(5000);
@@ -138,23 +137,7 @@ void publishMQTTMessage(char* topic, char* msg) {
     uint32_t length = strlen(msg);
     byte* p = (byte*)malloc(length);
     memcpy(p, msg, length);
-    mqttClient.publish(topic, p, length);
+    m_mqttClient.publish(topic, p, length);
     free(p);
 }
 
-// String mqttMessageToString(byte* msg, unsigned int length) {
-//     String str;
-//     for (int i = 0; i < length; i++) {
-//         str += (char)msg[i];
-//     }
-//     return str;
-// }
-
-
-// char* mqttMessageToChars(byte* msg, unsigned int length) {
-//     char* str;
-//     for (int i = 0; i < length; i++) {
-//         str += (char)msg[i];
-//     }
-//     return str;
-// }

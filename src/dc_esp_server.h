@@ -20,8 +20,6 @@ extern void setupWiFi(const char* ssid, const char* password);
 /* WEBSERVER / WEBSOCKET */
 #define WS_PORT 80
 #define WS_ROOT "/ws"
-extern AsyncWebServer webServer;
-extern AsyncWebSocket ws;
 
 typedef void (*wsMsgHandleFunc)(uint8_t*);
 extern void runWSServer(wsMsgHandleFunc func);
@@ -31,7 +29,6 @@ extern void sendWSString(String str);
 
 /* MQTT */
 #define MQTT_PUB_BUFFER_SIZE 1024
-extern PubSubClient mqttClient;
 
 typedef void (*mqttCMDFunc) (char* msg);
 typedef struct {char* topic; mqttCMDFunc func;} mqttSubscription;
@@ -42,11 +39,8 @@ typedef struct {char* topic; int flag; mqttPubFunc func;} mqttPublication;
 typedef void (*mqttCallBackFunc) (char* topic, byte* message, unsigned int length);
 extern void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCallBackFunc func);
 
-
 extern void serviceMQTTClient(const char* user, const char* pw, mqttSubscription* subs, int length);
 extern void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* subs, int length);
 extern void publishMQTTMessage(char* topic, char* msg);
-// extern String mqttMessageToString(byte* msg, unsigned int length);
-// extern char* mqttMessageToChars(byte* msg, unsigned int length);
 
 #endif /* DC_ESP_SERVER_H */

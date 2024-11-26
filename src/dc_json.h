@@ -6,8 +6,9 @@
 #include <cstdlib> // For atof and atoi
 
 #define btoa(x) ((x)?"true":"false")
+// #define itoa(x) ((x > 0)?"true":"false")
 
-#define JSON_OBJECT_SERIALIZED_LENGTH 512
+// #define JSON_OBJECT_SERIALIZED_LENGTH 512
 #define JSON_FIELD_STRING_LENGTH 50
 
 /* JSON PARSING FUNCTIONS ************************************************************************/

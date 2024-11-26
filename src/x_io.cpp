@@ -1,46 +1,53 @@
 #include "x_io.h"
  
 /* INTERRUPTS *****************************************************************************************/
-hw_timer_t *debounceTimer = NULL;
-enum itrCheckMap { 
-    CHK_ESTOP = 0, 
-    CHK_DOOR, 
-    CHK_FIST, 
-    CHK_ANVIL,
-    CHK_TOP,
-    CHK_PRESSURE 
-};
-int itrCheck[6]; 
-int itrNow;
+hw_timer_t *m_phwTimerDebounce = NULL;
+uint32_t m_aui32ItrCheck[ITR_PIN_COUNT]; 
+uint32_t m_ui32NowMillis;
+uint32_t g_ui32InterruptFlag = 0;
+bool m_bPrevPinState = false;
+void itrClearCheck(eItrCheckMap_t eChk, uint8_t pin, bool *pbPinState, bool bInvert = false) { 
 
-void itrClearCheck(int chk, int pin, bool *pinState) { 
-    if (itrCheck[chk] > 0 && itrCheck[chk] <= itrNow && *pinState != digitalRead(pin) ) {
-            *pinState = digitalRead(pin); 
-            itrCheck[chk] = 0; 
-            // checkAlarmsFlag = 1;
+    if ( ( m_aui32ItrCheck[eChk] == 0 ) || ( m_aui32ItrCheck[eChk] > m_ui32NowMillis ) ) 
+        return;
+
+    else {
+        m_bPrevPinState = *pbPinState;
+
+        *pbPinState = ( bInvert ? !(bool)digitalRead(pin) : (bool)digitalRead(pin) );
+        m_aui32ItrCheck[eChk] = 0; 
+
+        if ( m_bPrevPinState != *pbPinState )
+            g_ui32InterruptFlag = 1;
     }
 }
-void IRAM_ATTR onDebounceTimer() {
-    itrNow = millis();
-    itrClearCheck(CHK_ESTOP, PIN_ITR_ESTOP, &sta.emergencyStop);
-    itrClearCheck(CHK_DOOR, PIN_ITR_DOOR, &sta.doorClosed);
-    itrClearCheck(CHK_FIST, PIN_ITR_FIST, &sta.fistContact);
-    itrClearCheck(CHK_ANVIL, PIN_ITR_ANVIL, &sta.anvilContact);
-    itrClearCheck(CHK_TOP, PIN_ITR_TOP, &sta.topContact);
-    itrClearCheck(CHK_PRESSURE, PIN_ITR_PRESSURE, &sta.pressureContact);
+
+void IRAM_ATTR isrDebounceTimer() {
+    // timerAlarmDisable(m_phwTimerDebounce);
+
+    m_ui32NowMillis = millis();
+    itrClearCheck(CHK_ESTOP, PIN_ITR_ESTOP, &g_state.eStop, ITR_INVERT_PIN_STATE);
+    itrClearCheck(CHK_DOOR, PIN_ITR_DOOR, &g_state.doorOpen);
+    itrClearCheck(CHK_FIST, PIN_ITR_FIST, &g_state.fistLimit, ITR_INVERT_PIN_STATE);
+    itrClearCheck(CHK_ANVIL, PIN_ITR_ANVIL, &g_state.anvilLimit, ITR_INVERT_PIN_STATE);
+    itrClearCheck(CHK_TOP, PIN_ITR_TOP, &g_state.topLimit, ITR_INVERT_PIN_STATE);
+    itrClearCheck(CHK_PRESSURE, PIN_ITR_PRESSURE, &g_state.pressure, ITR_INVERT_PIN_STATE);
+    
+    // timerAlarmEnable(m_phwTimerDebounce);
 }
 
-void debounce(int chk) { 
-    if (itrCheck[chk] == 0) {
-        itrCheck[chk] = millis() + ITR_DEBOUNCE_ALARM_INC_mSEC; 
+void debounce(eItrCheckMap_t eChk) { 
+    if (m_aui32ItrCheck[eChk] == 0) {
+        m_aui32ItrCheck[eChk] = millis() + ITR_DEBOUNCE_ALARM_INC_mSEC; 
     }
 }
-void IRAM_ATTR eStopInturrupt() { debounce(CHK_ESTOP); }
-void IRAM_ATTR doorInturrupt() { debounce(CHK_DOOR); }
-void IRAM_ATTR fistInturrupt() { debounce(CHK_FIST); }
-void IRAM_ATTR anvilInturrupt() { debounce(CHK_ANVIL); }
-void IRAM_ATTR topInturrupt() { debounce(CHK_TOP); }
-void IRAM_ATTR pressurelInturrupt() { debounce(CHK_PRESSURE); }
+
+void IRAM_ATTR isrEStop() { debounce(CHK_ESTOP); }
+void IRAM_ATTR isrDoor() { debounce(CHK_DOOR); }
+void IRAM_ATTR isrFistLimit() { debounce(CHK_FIST); }
+void IRAM_ATTR isrAnvilLimit() { debounce(CHK_ANVIL); }
+void IRAM_ATTR isrTopLimit() { debounce(CHK_TOP); }
+void IRAM_ATTR isrPressure() { debounce(CHK_PRESSURE); }
 
 void setupInterrupts() {
     pinMode(PIN_ITR_ESTOP, INPUT_PULLUP);
@@ -50,32 +57,32 @@ void setupInterrupts() {
     pinMode(PIN_ITR_TOP, INPUT_PULLUP);
     pinMode(PIN_ITR_PRESSURE, INPUT_PULLUP);
 
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_ESTOP), eStopInturrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_DOOR), doorInturrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_FIST), fistInturrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_ANVIL), anvilInturrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_TOP), topInturrupt, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(PIN_ITR_PRESSURE), pressurelInturrupt, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_ESTOP), isrEStop, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_DOOR), isrDoor, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_FIST), isrFistLimit, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_ANVIL), isrAnvilLimit, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_TOP), isrTopLimit, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_ITR_PRESSURE), isrPressure, CHANGE);
 
-    debounceTimer = timerBegin(
+    m_phwTimerDebounce = timerBegin(
         ITR_DEBOUNCE_TIMER, 
         ITR_DEBOUNCE_PRESCALE, 
         ITR_DEBOUNCE_COUNT_UP
     );
     
     timerAttachInterrupt(
-        debounceTimer, 
-        onDebounceTimer, 
+        m_phwTimerDebounce, 
+        isrDebounceTimer, 
         ITR_DEBOUNCE_EDGE 
     );
 
     timerAlarmWrite(
-        debounceTimer, 
+        m_phwTimerDebounce, 
         ITR_DEBOUNCE_TIMER_PERIOD_uSEC, 
         ITR_DEBOUNCE_AUTORUN
     );
 
-    timerAlarmEnable(debounceTimer);
+    timerAlarmEnable(m_phwTimerDebounce);
 }
 
 /* INTERRUPTS *** END ********************************************************************************/
@@ -84,19 +91,19 @@ void setupInterrupts() {
 
 /* RELAY CONTROL ************************************************************************************/
 
-void brakeOn() { /* TODO: OK TO APPLY BREAK */
-    digitalWrite(PIN_OUT_BRAKE, BREAK_ON); 
+void switchBrake(int setting) {
+    digitalWrite(PIN_OUT_BRAKE, setting); 
+    g_state.breakOn = (bool)digitalRead(PIN_OUT_BRAKE);
 }
-void brakeOff() { /* TODO: OK TO RELESE BREAK */
-   digitalWrite(PIN_OUT_BRAKE, BREAK_OFF);
-}
+void brakeOn() { switchBrake(BREAK_ON); }
+void brakeOff() { switchBrake(BREAK_OFF); }
 
-void magnetOn() { /* TODO: OK TO GRAB HAMMER */
-   digitalWrite(PIN_OUT_MAGNET, MAGNET_ON);
+void switchMagnet(int setting) {
+    digitalWrite(PIN_OUT_MAGNET, setting); 
+    g_state.magnetOn = (bool)digitalRead(PIN_OUT_MAGNET);
 }
-void magnetOff() { /* TODO: OK TO DROP HAMMER */
-    digitalWrite(PIN_OUT_MAGNET, MAGNET_OFF); 
-}
+void magnetOn() { switchMagnet(MAGNET_ON); }
+void magnetOff() { switchMagnet(MAGNET_OFF); }
 
 void setupRelayControl() {
     pinMode(PIN_OUT_BRAKE, OUTPUT);
@@ -111,17 +118,24 @@ void setupRelayControl() {
 
 
 /* MOTOR CONTROL ***********************************************************************************/
-ESP_FlexyStepper motor;
+ESP_FlexyStepper m_motor;
 
 void setMotorSpeed(int stepsPerSec) {
     if (stepsPerSec > MOT_STEPS_PER_SEC_HIGH) { stepsPerSec = MOT_STEPS_PER_SEC_HIGH; }
-    motor.setSpeedInStepsPerSecond(stepsPerSec);
-    motor.setAccelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
-    motor.setDecelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
+    m_motor.setSpeedInStepsPerSecond(stepsPerSec);
+    m_motor.setAccelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
+    m_motor.setDecelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
 }
 
-void motorStop() { digitalWrite(PIN_OUT_MOT_EN, MOT_DISABLED); }
-void motorEnable() { digitalWrite(PIN_OUT_MOT_EN, MOT_ENABLED); }
+void motorOn() { 
+    digitalWrite(PIN_OUT_MOT_EN, MOT_ENABLED); 
+    g_state.motorOn = true;
+}
+void motorOff() { 
+    Serial.printf("\nmotorOff()");
+    digitalWrite(PIN_OUT_MOT_EN, MOT_DISABLED); 
+    g_state.motorOn = false;
+}
 
 void setupMotor() {
 
@@ -129,44 +143,44 @@ void setupMotor() {
     pinMode(PIN_OUT_MOT_DIR, OUTPUT);
     pinMode(PIN_OUT_MOT_EN, OUTPUT);
 
-    motorStop();
+    motorOff();
     
-    motor.connectToPins(PIN_OUT_MOT_STEP, PIN_OUT_MOT_DIR);
+    m_motor.connectToPins(PIN_OUT_MOT_STEP, PIN_OUT_MOT_DIR);
     setMotorSpeed(MOT_STEPS_PER_SEC_LOW);
-    motor.startAsService(MOT_SERVICE_CORE);
+    m_motor.startAsService(MOT_SERVICE_CORE);
 }
 
-void emergencyStop() { /* TODO: ORDER TO STOP DOING STUFF */ }
-void moveToHome() { /* TODO: OK TO MOVE DOWN */ }
-void moveToHammer() { /* TODO: OK TO MOVE DOWN */ }
-void moveToSwingHeight() { /* TODO: OK TO MOVE UP */ }
+// void emergencyStop() { /* TODO: ORDER TO STOP DOING STUFF */ }
+// void moveToHome() { /* TODO: OK TO MOVE DOWN */ }
+// void moveToHammer() { /* TODO: OK TO MOVE DOWN */ }
+// void moveToSwingHeight() { /* TODO: OK TO MOVE UP */ }
 
 /* MOTOR CONTROL *** END *************************************************************************/
 
 
 /* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ 
 #ifdef TEST_STEP_DRIVER
-int steps = 16000;
+int32_t m_steps = 16000;
 void motorBackNForth() {
-    if(sta.cyclesCompleted <= cfg.cycles) {
-        if (motor.getDistanceToTargetSigned() == 0) {
-            if(sta.cyclesCompleted == 0) {
-                steps = ( cfg.height / FIST_INCH_PER_REV ) * MOT_STEP_PER_REV;
+    if(g_state.cyclesCompleted <= g_config.cycles) {
+        if (m_motor.getDistanceToTargetSigned() == 0) {
+            if(g_state.cyclesCompleted == 0) {
+                m_steps = ( g_config.height / FIST_INCH_PER_REV ) * MOT_STEP_PER_REV;
             } else {
-                steps *= -1;
+                m_steps *= -1;
             }
-            motorEnable();
+            motorOn();
             setMotorSpeed(MOT_STEPS_PER_SEC_HIGH);
             delay(1000);
-            if (steps < 0) {
+            if (m_steps < 0) {
                 magnetOn();
                 brakeOff();
             } else {
                 magnetOff();
                 brakeOn();
-                sta.cyclesCompleted++;
+                g_state.cyclesCompleted++;
             }
-            motor.setTargetPositionRelativeInSteps(steps);
+            m_motor.setTargetPositionRelativeInSteps(m_steps);
         }
     }
 }

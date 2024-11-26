@@ -5,6 +5,7 @@
 #include "x_models.h"
 #include "x_io.h"
 #include "x_mqtt.h"
+#include "x_machine.h"
 
 #define SERIAL_BAUD 115200
 #define SERIAL_DELAY 500
@@ -23,8 +24,8 @@ void setup() {
     setupMQTT_X(SECRET_MQTT_BROKER, SECRET_MQTT_PORT);
 
     // runWSServer((wsMsgHandleFunc)&wsMessageHandler);
-    sta.setStatus(STATUS_START);
-    pubs[PUB_STATE].flag = 1;
+    g_state.setStatus(STATUS_START);
+    setMQTTPubFlag(PUB_STATE);
 
 }
 

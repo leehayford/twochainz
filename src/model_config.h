@@ -2,6 +2,7 @@
 #define MODEL_CONFIG_H
 
 #include <Arduino.h>
+#include "dc_esp_server.h"
 #include "dc_json.h"
 
 class Config {
@@ -9,7 +10,7 @@ protected:
     const char* cyclesKey = "\"cycles\":";
     const char* heightKey = "\"height\":";
     
-    char jsonOut[JSON_OBJECT_SERIALIZED_LENGTH];
+    char jsonOut[MQTT_PUB_BUFFER_SIZE];
 
 public:
     int cycles;
@@ -47,30 +48,5 @@ public:
         Serial.printf("Height: %f\n\n", height);
     }
 };
-
-
-/* EXAMPLE 
-    Config cfg;
-    cfg.debugPrintValues();
-    
-    const char* jsonString = R"({
-        "cycles": 30,
-        "height": 5.5
-    })";
-    
-    cfg.parseFromJSON(jsonString);
-    cfg.serializeToJSON();
-    cfg.debugPrintJSON();
-    
-    cfg.cycles = 27;
-    cfg.height = 38.75;
-    
-    jsonString = cfg.serializeToJSON();
-    cfg.debugPrintJSON();
-    
-    cfg.parseFromJSON(jsonString);
-    cfg.debugPrintValues();
-    
-*/
 
 #endif /* MODEL_CONFIG_H */

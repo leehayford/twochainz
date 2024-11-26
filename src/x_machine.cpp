@@ -7,51 +7,83 @@ void moveToSwingHeight();
 void emergencyStop();
 
 /* ALARMS *********************************************************************************************/
-int checkAlarmsFlag = 0;
+
+bool m_bAlarmRaised = false;
+
 void statusUpdate(const char* status_msg) {
-    sta.setStatus(status_msg);
-    pubs[PUB_STATE].flag = 1;
+    g_state.setStatus(status_msg);
+    setMQTTPubFlag(PUB_STATE);
 }
 
-void alarmCheckEStop() { /* TODO: */
-    if( sta.emergencyStop ) { 
-        statusUpdate(STATUS_ESTOP); 
-    }
-}
-void alarmCheckDoor() { /* TODO: */
-    if( sta.doorClosed ) { 
-        statusUpdate(STATUS_DOOR_OPEN); 
-    }
-}
-void alarmCheckFist() { /* TODO: */
-    if( sta.fistContact ) { 
-        statusUpdate(STATUS_FIST_OPEN); 
-    }
-}
-void alarmCheckAnvil() { /* TODO: */
-    if( sta.anvilContact ) { 
-        statusUpdate(STATUS_ANVIL_LIMIT); 
-    }
-}
-void alarmCheckTop() { /* TODO: */
-    if( sta.topContact ) { 
-        statusUpdate(STATUS_TOP_LIMIT); 
-    }
-}
-void alarmCheckPressure() { /* TODO: */
-    if( sta.pressureContact ) { 
-        statusUpdate(STATUS_PRESSURE); 
-    }
+bool checkIsBrakeEngaged() {
+    return (
+        g_state.breakOn // solenoid valve opened 
+        &&
+        !g_state.pressure // pressure has been released 
+    );
 }
 
+bool checkIsHome() {
+    return ( 
+        g_state.anvilLimit // hammer is on the anvil
+        && 
+        g_state.fistLimit // fist is on the hammer
+        &&
+        !g_state.motorOn // motor has been disabled
+        &&
+        checkIsBrakeEngaged() 
+    );
+}
+
+bool checkIsRunning() {
+    return ( 
+        ( 
+            ( g_config.cycles > 0 ) // we were told to swing the hammer 
+            && 
+            ( g_state.cyclesCompleted < g_config.cycles ) // we haven't finished swinging the hammer
+        ) 
+        ||
+        !checkIsHome() // for some other reason, we are not safely at home
+    );
+}
+
+bool checkDoorAlarm() {
+    return ( g_state.doorOpen && (
+            checkIsRunning() // we are swinging the hammer
+            || 
+            !checkIsHome() // we haven't returned to home, or we're stuck in some dangerous position
+        )
+    );
+}
+
+void doEStop() {
+    if ( !checkIsBrakeEngaged( ) ) 
+        brakeOn();
+
+    
+}
+ 
 void checkIOAlarms() {
-    if (checkAlarmsFlag > 0) {
-        alarmCheckEStop();
-        alarmCheckDoor();
-        alarmCheckFist();
-        alarmCheckAnvil();
-        alarmCheckTop();
-        alarmCheckPressure();
-        checkAlarmsFlag = 0;
-    } 
+    if (g_ui32InterruptFlag > 0) { // Serial.printf("\ng_ui32InterruptFlag: %d", g_ui32InterruptFlag);
+        g_ui32InterruptFlag = 0;
+
+        if ( g_state.eStop ) {
+            brakeOn();
+            motorOff();
+            magnetOff();
+            statusUpdate(STATUS_ESTOP);
+            return;
+        }
+
+        if ( checkDoorAlarm( ) ) {
+            brakeOn();
+            motorOff();
+            if ( g_state.fistLimit )
+                magnetOn();
+            statusUpdate(STATUS_DOOR_OPEN);
+            return;
+        }
+
+        statusUpdate(STATUS_READY);
+    }
 }

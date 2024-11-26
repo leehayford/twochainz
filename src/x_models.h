@@ -4,7 +4,7 @@
 #include "model_state.h"
 #include "model_config.h"
 
-extern State sta; 
-extern Config cfg; 
+extern State g_state; 
+extern Config g_config; 
 
 #endif /* X_MODELS_H */

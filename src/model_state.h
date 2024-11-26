@@ -3,42 +3,43 @@
 
 #include <Arduino.h>
 #include <mutex>
+#include "dc_esp_server.h"
 #include "dc_json.h"
 
 class State {
 protected:
     std::mutex mut;
 
-    const char* emergencyStopKey = "\"emergency_stop\":";
-    const char* doorClosedKey = "\"door_closed\":";
-    const char* fistContactKey = "\"fist_contact\":";
-    const char* anvilContactKey = "\"anvil_contact\":";
-    const char* topContactKey = "\"top_contact\":";
-    const char* pressureContactKey = "\"pressure_contact\":";
+    const char* eStopKey = "\"estop\":";
+    const char* doorOpenKey = "\"door_open\":";
+    const char* fistLimitKey = "\"fist_limit\":";
+    const char* anvilLimitKey = "\"anvil_limit\":";
+    const char* topLimitKey = "\"top_limit\":";
+    const char* pressureKey = "\"pressure\":";
 
     const char* brakeOnKey = "\"break_on\":";
     const char* magnetOnKey = "\"magnet_on\":";
-    const char* motorEnabledkey = "\"motor_enabled\":";
+    const char* motorOnkey = "\"motor_on\":";
 
     const char* cyclesCompletedKey = "\"cycles_completed\":";
     const char* currentHeightKey = "\"current_height\":";
     const char* statusKey = "\"status\":";
     
-    char jsonOut[JSON_OBJECT_SERIALIZED_LENGTH];
+    char jsonOut[MQTT_PUB_BUFFER_SIZE];
 
 public:
     /* Interrupt pin state ( set & cleared in code ) */
-    bool emergencyStop;
-    bool doorClosed;
-    bool fistContact;
-    bool anvilContact;
-    bool topContact;
-    bool pressureContact;
+    bool eStop;
+    bool doorOpen;
+    bool fistLimit;
+    bool anvilLimit;
+    bool topLimit;
+    bool pressure;
 
     /* Relay control state */
     bool breakOn;
     bool magnetOn;
-    bool motorEnabled;
+    bool motorOn;
 
     int cyclesCompleted;
     float currentHeight;
@@ -48,30 +49,30 @@ public:
 // public:
     State(
         bool e_stop = false,        
-        bool door = false,
-        bool fist = false,
-        bool anvil = false,
-        bool top = false,
+        bool door_open = false,
+        bool fist_limit = false,
+        bool anvil_limit = false,
+        bool top_limit = false,
         bool pressure = false,
         
-        bool brake = false,
-        bool mag = false,
-        bool mot_en = false,
+        bool brake_on = false,
+        bool magnet_on = false,
+        bool motor_on = false,
 
         int cycles = 0,
         float height = 0.0,
         const char stat[JSON_FIELD_STRING_LENGTH]="initialized"
     ) {
-        emergencyStop = e_stop;
-        doorClosed = door;
-        fistContact = fist;
-        anvilContact = anvil;
-        topContact = top;
-        pressureContact = pressure;
+        eStop = e_stop;
+        doorOpen = door_open;
+        fistLimit = fist_limit;
+        anvilLimit = anvil_limit;
+        topLimit = top_limit;
+        pressure = pressure;
         
-        breakOn = brake;
-        magnetOn = mag;
-        motorEnabled = mot_en;
+        breakOn = brake_on;
+        magnetOn = magnet_on;
+        motorOn = motor_on;
 
         cyclesCompleted = cycles;
         currentHeight = height;
@@ -82,7 +83,7 @@ public:
     
     void setDoorClosed(bool b) {
         mut.lock();
-        doorClosed = b;
+        doorOpen = b;
         mut.unlock();
     }
 
@@ -92,9 +93,9 @@ public:
     
     /* TODO: MAKE READ ONLY AFTER DEBUG */
     void parseFromJSON(const char* jsonString) {
-        jsonParseBool(jsonString, doorClosedKey, doorClosed);
-        jsonParseBool(jsonString, fistContactKey, fistContact);
-        jsonParseBool(jsonString, anvilContactKey, anvilContact);
+        jsonParseBool(jsonString, doorOpenKey, doorOpen);
+        jsonParseBool(jsonString, fistLimitKey, fistLimit);
+        jsonParseBool(jsonString, anvilLimitKey, anvilLimit);
         
         jsonParseBool(jsonString, brakeOnKey, breakOn);
         jsonParseBool(jsonString, magnetOnKey, magnetOn);
@@ -107,16 +108,16 @@ public:
     char* serializeToJSON() {
         jsonSerializeStart(jsonOut);
 
-        jsonSerializeBool(jsonOut, emergencyStopKey, emergencyStop);
-        jsonSerializeBool(jsonOut, doorClosedKey, doorClosed);
-        jsonSerializeBool(jsonOut, fistContactKey, fistContact);
-        jsonSerializeBool(jsonOut, anvilContactKey, anvilContact);
-        jsonSerializeBool(jsonOut, topContactKey, topContact);
-        jsonSerializeBool(jsonOut, pressureContactKey, pressureContact);
+        jsonSerializeBool(jsonOut, eStopKey, eStop);
+        jsonSerializeBool(jsonOut, doorOpenKey, doorOpen);
+        jsonSerializeBool(jsonOut, fistLimitKey, fistLimit);
+        jsonSerializeBool(jsonOut, anvilLimitKey, anvilLimit);
+        jsonSerializeBool(jsonOut, topLimitKey, topLimit);
+        jsonSerializeBool(jsonOut, pressureKey, pressure);
         
         jsonSerializeBool(jsonOut, brakeOnKey, breakOn);
         jsonSerializeBool(jsonOut, magnetOnKey, magnetOn); 
-        jsonSerializeBool(jsonOut, motorEnabledkey, motorEnabled); 
+        jsonSerializeBool(jsonOut, motorOnkey, motorOn); 
 
         jsonSerializeInt(jsonOut, cyclesCompletedKey, cyclesCompleted);
         jsonSerializeFloat(jsonOut, currentHeightKey, currentHeight);
@@ -133,16 +134,16 @@ public:
     void debugPrintValues() {
         Serial.printf("State.debugPrintValues() :\n");
         
-        Serial.printf("Emergency stop: %s\n", btoa(emergencyStop));
-        Serial.printf("Door closed: %s\n", btoa(doorClosed));
-        Serial.printf("Fist at hammer: %s\n", btoa(fistContact));
-        Serial.printf("Hammer at anvil: %s\n", btoa(anvilContact));
-        Serial.printf("Fist at top: %s\n", btoa(topContact));
-        Serial.printf("Brake pressure OK: %s\n", btoa(pressureContact));
+        Serial.printf("Emergency stop: %s\n", btoa(eStop));
+        Serial.printf("Door closed: %s\n", btoa(doorOpen));
+        Serial.printf("Fist at hammer: %s\n", btoa(fistLimit));
+        Serial.printf("Hammer at anvil_limit: %s\n", btoa(anvilLimit));
+        Serial.printf("Fist at top_limit: %s\n", btoa(topLimit));
+        Serial.printf("Brake pressure OK: %s\n", btoa(pressure));
         
         Serial.printf("Brake on: %s\n", btoa(breakOn));
         Serial.printf("Magnet on: %s\n", btoa(magnetOn));
-        Serial.printf("Motor Enabled: %s\n", btoa(motorEnabled));
+        Serial.printf("Motor Enabled: %s\n", btoa(motorOn));
 
         Serial.printf("Cycles completed: %d\n", cyclesCompleted);
         Serial.printf("Current height: %f\n", currentHeight);

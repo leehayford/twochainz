@@ -1,4 +1,4 @@
 #include "x_models.h"
 
-State sta;
-Config cfg;
+State g_state;
+Config g_config;

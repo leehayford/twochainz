@@ -14,15 +14,28 @@
 #define PIN_ITR_TOP 32 // Interrupt -> Input Pullup -> Low = Fist is at top 
 #define PIN_ITR_PRESSURE 33 // Interrupt -> Input Pullup -> Low = Brake has pressure 
 
+typedef enum { 
+    CHK_ESTOP = 0, 
+    CHK_DOOR, 
+    CHK_FIST, 
+    CHK_ANVIL,
+    CHK_TOP,
+    CHK_PRESSURE 
+} eItrCheckMap_t;
+#define ITR_PIN_COUNT 6
+#define ITR_INVERT_PIN_STATE true
+
 /* INTERRUPT PINS -> DEBOUNCE */
-#define ITR_DEBOUNCE_ALARM_INC_mSEC 50
-#define ITR_DEBOUNCE_TIMER_PERIOD_uSEC 10000
+#define ITR_DEBOUNCE_ALARM_INC_mSEC 5
+#define ITR_DEBOUNCE_TIMER_PERIOD_uSEC 2000
 #define ITR_DEBOUNCE_TIMER 0 // Timer 0
 #define ITR_DEBOUNCE_PRESCALE 80 // Prescale of 80 = 1MHz for ESP32 DevKit V1
 #define ITR_DEBOUNCE_COUNT_UP true // Timer counts up as opposed to down
 #define ITR_DEBOUNCE_EDGE true // No idea what this is; must be set true...
 #define ITR_DEBOUNCE_AUTORUN true // set 'autoreload' true to run continuously
 // #define ITR_DEBOUNCE_RUN_ONCE false // set 'autoreload' false to run once
+extern uint32_t g_ui32InterruptFlag;
+
 
 /* INTERRUPTS *** END ********************************************************************************/
 
@@ -52,7 +65,6 @@ extern void magnetOff();
 
 /* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ #define TEST_STEP_DRIVER
 #ifdef TEST_STEP_DRIVER
-extern int steps;
 extern void motorBackNForth();
 #endif /* TEST_STEP_DRIVER */
 
@@ -71,8 +83,8 @@ extern void motorBackNForth();
 #define FIST_HEIGHT_MAX_INCH 48.000
 #define FIST_HEIGHT_MAX_STEP 16000 // = ( 48 / 6 ) * 2000
 
-extern void motorStop();
-extern void motorEnable();
+extern void motorOff();
+extern void motorOn();
 extern void setMotorSpeed(int stepsPerSec);
 
 /* MOTOR CONTROL *** END *************************************************************************/
