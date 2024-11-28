@@ -63,7 +63,8 @@ extern void magnetOff();
 #define PIN_OUT_MOT_DIR 25 // Stepper Control Control -> Output -> High = Up
 #define PIN_OUT_MOT_EN 13 // Stepper Control Control -> Output -> High = Enabled
 
-/* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ #define TEST_STEP_DRIVER
+/* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ 
+#define TEST_STEP_DRIVER
 #ifdef TEST_STEP_DRIVER
 extern void motorBackNForth();
 #endif /* TEST_STEP_DRIVER */

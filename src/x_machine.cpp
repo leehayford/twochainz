@@ -225,18 +225,40 @@ bool checkConfiguration() {
 
 bool raiseHammer() { /* TODO */
 
+    g_ops.raiseHammer = true;
+    motorSetSpeedAndCourse();                   // Get to steppin'
+
     return g_ops.raiseHammer;
 }
 
 bool dropHammer() { /* TODO */
 
+    g_ops.dropHammer = true;
     return g_ops.dropHammer;
 }
 
-bool runConfiguration() {
+bool runConfiguration() { /* TODO */
+
+    if( g_ops.dropHammer                        /* We dropped the hammer */
+    ) {
+        // Wait for it to strike
+
+        // After strike: 
+        // - go home
+        
+        // - check cyclesCompleted
+        //      Raise the hammer and strike again
+        //      Or 
+        //      Shut it down and wait for a new congig
+    }
 
 
+    if( g_ops.raiseHammer                        /* We dropped the hammer */
+    ) {
+        // Wait until we're ready to drop
 
+        // After ready, drop
+    }
 }
 
 
