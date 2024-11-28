@@ -77,6 +77,7 @@ extern void motorBackNForth();
 #define MOT_STEPS_PER_SEC_ACCEL 2000
 #define MOT_SERVICE_CORE 0 // Which processor core onwhich to run the stepper service 
 
+#define MOT_REVOVERY_STEPS 500 // 1/4 Revolution
 #define MOT_STEP_PER_REV 2000
 
 #define FIST_INCH_PER_REV 6.000
@@ -87,7 +88,7 @@ extern void motorOff();
 extern void motorOn();
 extern void motorSetSpeed(int stepsPerSec);
 extern void motorSetPositionAsZero();
-extern void motorMoveRelativeSteps(int32_t steps);
+extern void motorMoveRelativeSteps(int32_t steps, uint32_t stepsPerSec);
 extern bool motorTargetReached();
 extern int32_t motorGetPosition();
 /* MOTOR CONTROL *** END *************************************************************************/
@@ -97,6 +98,6 @@ extern int32_t motorGetPosition();
 
 
 extern void setupIO();
-extern void checkIOAlarms();
+extern void runOperations();
 
 #endif /* X_IO_H */

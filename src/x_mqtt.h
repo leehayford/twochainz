@@ -20,10 +20,11 @@ typedef enum  {
 extern void setMQTTPubFlag(eMqttPubMap_t pub);
 
 
-#define N_SUBS 3
+#define N_SUBS 4
 void mqttHandleCMDReport(char* msg);
 void mqttHandleCMDState(char* msg);
 void mqttHandleCMDConfig(char* msg);
+void mqttHandleCMDError(char* msg);
 
 
 

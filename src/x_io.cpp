@@ -166,14 +166,6 @@ void setupMotor() {
     motorOff();
 }
 
-// void emergencyStop() { /* TODO: ORDER TO STOP DOING STUFF */ }
-// void moveToHome() { /* TODO: OK TO MOVE DOWN */ }
-// void moveToHammer() { /* TODO: OK TO MOVE DOWN */ }
-// void moveToSwingHeight() { /* TODO: OK TO MOVE UP */ }
-
-/* MOTOR CONTROL *** END *************************************************************************/
-
-
 int32_t m_i32StepsTarget = 0;
 int32_t m_i32MotorPosSteps = 0;
 int32_t m_i32LastPosUpdate = 0;
@@ -185,8 +177,15 @@ int32_t motorGetPosition() {
     setMQTTPubFlag(PUB_MOTPOS);
 }
 
-void motorMoveRelativeSteps(int32_t steps) { m_motor.setTargetPositionRelativeInSteps(steps); }
+void motorMoveRelativeSteps(int32_t steps, uint32_t stepsPerSec) { 
+    motorOn();                                       
+    motorSetSpeed(stepsPerSec);                      
+    m_motor.setTargetPositionRelativeInSteps(steps); 
+}
+
 bool motorTargetReached() { return (m_motor.getDistanceToTargetSigned() == 0); }
+
+/* MOTOR CONTROL *** END *************************************************************************/
 
 /* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ 
 #ifdef TEST_STEP_DRIVER

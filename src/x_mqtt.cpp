@@ -35,6 +35,7 @@ mqttSubscription m_mqttSubs[N_SUBS] = {
     {(char*)"esp32/cmd/report", (mqttCMDFunc)&mqttHandleCMDReport},
     {(char*)"esp32/cmd/state", (mqttCMDFunc)&mqttHandleCMDState},
     {(char*)"esp32/cmd/config", (mqttCMDFunc)&mqttHandleCMDConfig},
+    {(char*)"esp32/cmd/error", (mqttCMDFunc)&mqttHandleCMDError},
 };
 
 void mqttHandleCMDReport(char* msg) {
@@ -57,6 +58,9 @@ void mqttHandleCMDConfig(char* msg) {
     setMQTTPubFlag(PUB_MOTPOS);
 }
 
+void mqttHandleCMDError(char* msg) { /* TODO: CLEAR ERRORS... */
+
+}
 
 /* MQTT General Setup *************************************************************************************/
 void mqttCallBack_X(char* topic, byte* message, unsigned int length) {

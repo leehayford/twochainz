@@ -2,232 +2,247 @@
 
 uint32_t m_ui32MotorSpeed = MOT_STEPS_PER_SEC_HIGH;
 int32_t m_i32MotorTargetSteps = 0;
+int32_t m_i32MotorPosSteps = 0;
+int32_t m_i32LastPosUpdate = 0;
+int32_t m_i32PosUpdatePeriod_mSec = 500;
 
-void moveFistDown() {
+void motorSetSpeedAndCourse() {
+   
+    m_i32MotorPosSteps = motorGetPosition();            // Where do we think we are?
 
-    if(motorGetPosition() <= 0) {
-        // WE'RE LOST...  GO SLOW... 
-        m_ui32MotorSpeed = MOT_STEPS_PER_SEC_LOW;
-        m_i32MotorTargetSteps = MOT_STEPS_PER_SEC_LOW * -1;
+    if( m_i32MotorPosSteps < 0                          /* We're lost */
+    ||  m_i32MotorPosSteps > FIST_HEIGHT_MAX_STEP       /* We're lost */
+    ||  g_ops.recovery                                  /* We're lost and reassissing */
+    ) {  
+        m_ui32MotorSpeed = MOT_STEPS_PER_SEC_LOW;       // Go *** SLOW ***
+        m_i32MotorTargetSteps = MOT_REVOVERY_STEPS * -1;// Do 1/4 revolution and reassess
+
+        if( !g_ops.recovery                             /* Ensure we set flags only once */
+        ) {   
+            g_ops.awaitHelp = true;                     // We need an operator to tell us it's ok to continue            
+            g_ops.recovery = true;                      // Come back and reassess until we've been home
+            g_ops.seekHome = true;                      // GO HOME 
+            statusUpdate(STATUS_RECOVERY);              // Send status to the world
+        }
+
+        if( g_ops.seekHome                              /* We've been home */
+        &&  m_i32MotorPosSteps                          /* We're still there */
+        ) {
+            g_ops.recovery = false;                     // Clear the recovery flag
+        }
     }
-    else {
-        // FULL RIP
-        m_ui32MotorSpeed = MOT_STEPS_PER_SEC_HIGH;
-        m_i32MotorTargetSteps = motorGetPosition() * -1;
+
+    else {                                              // We're probably on track 
+        m_ui32MotorSpeed = MOT_STEPS_PER_SEC_HIGH;      // Go *** FULL RIP ***
+        
+        if( g_ops.seekHammer                            /* We need to go DOWN */
+        ||  g_ops.seekAnvil                             /* We need to go DOWN */
+        ||  g_ops.seekHome                              /* We need to go DOWN */
+        ) {  
+            // Go DOWN to zero height
+            m_i32MotorTargetSteps = motorGetPosition() * -1;
+        }
+
+        else                                            /* We need to go UP */
+        if( g_ops.raiseHammer
+        ) {  
+            // Go UP to configured height
+            m_i32MotorTargetSteps = (g_config.height / FIST_INCH_PER_REV) * MOT_STEP_PER_REV;          
+        }                    
     }
 
-    if(!g_state.motorOn || motorTargetReached()) {
-        motorOn();
-        motorSetSpeed(m_ui32MotorSpeed);
-        motorMoveRelativeSteps(m_i32MotorTargetSteps);
+    if( !g_state.motorOn                                /* This is the first time through */ 
+    ||  g_ops.recovery                                  /* We are lost and seeking home */   
+    ) {                                                     
+        // Get to steppin'  
+        motorMoveRelativeSteps(m_i32MotorTargetSteps, m_ui32MotorSpeed);
     }
-}
-
-void moveFistUp() {
     
-    if(motorGetPosition() > FIST_HEIGHT_MAX_STEP) {
-        // WE'RE LOST...  GO SLOW... 
-        m_ui32MotorSpeed = MOT_STEPS_PER_SEC_LOW;
-        m_i32MotorTargetSteps = MOT_STEPS_PER_SEC_LOW;
-    }
-    else {
-        // FULL RIP
-        m_ui32MotorSpeed = MOT_STEPS_PER_SEC_HIGH;
-        m_i32MotorTargetSteps = (g_config.height / FIST_INCH_PER_REV) * MOT_STEP_PER_REV;;
-    }
-
-    if(!g_state.motorOn || motorTargetReached()) {
-        motorOn();
-        motorSetSpeed(m_ui32MotorSpeed);
-        motorMoveRelativeSteps(m_i32MotorTargetSteps);
-    }
 
 }
 
-/* ALARMS *********************************************************************************************/
+/* OPERATIONS *****************************************************************************************/
 
 void statusUpdate(const char* status_msg) {
     g_state.setStatus(status_msg);
     setMQTTPubFlag(PUB_STATE);
 }
 
-bool checkIsBrakeEngaged() {
-    return (
-        g_state.breakOn // solenoid valve opened 
-        &&
-        !g_state.pressure // pressure has been released 
-    );
-}
-
-bool checkIsHome() {
-    return ( 
-        g_state.anvilLimit // hammer is on the anvil
-        && 
-        g_state.fistLimit // fist is on the hammer
-    );
-}
-
-
-bool checkIsRunning() {
-    return ( 
-        ( 
-            ( g_config.cycles > 0 ) // we were told to swing the hammer 
-            && 
-            ( g_state.cyclesCompleted < g_config.cycles ) // we haven't finished swinging the hammer
-        ) 
-        ||
-        !checkIsHome() // for some other reason, we are not safely at home
-    );
-}
-
-
-#define N_OP_FLAGS 10
-typedef enum {
-    OP_ESTOP = 0,
-    OP_AWAIT_DOOR_CLOSE,
-    OP_AWAIT_CONFIG,
-
-    OP_FIND_HAMMER,
-    OP_FIND_ANVIL,
-    OP_GO_HOME,
-
-    OP_BRAKE_ENABLE,
-    OP_BRAKE_DISABLE,
-    OP_RAISE_HAMMER,
-    OP_DROP_HAMMER
-} eOpFlagMap_t;
-uint32_t m_aui32OpFlags[N_OP_FLAGS];
-
 bool checkEStop() {
     
-    if(m_aui32OpFlags[OP_ESTOP] && !g_state.eStop) {
-        /* TODO: CHECK IF SAFE TO CLEAR */
-        m_aui32OpFlags[OP_ESTOP] = 0;
-    }
+    if( g_state.eStop                           /* The emergency stop button is pressed */
+    ) {                                     
+        motorOff();                             // Stop moving
+        brakeOn();                              // Apply the brake
+        magnetOff();                            // Turn off the magnet
 
-    if(g_state.eStop) { 
-        brakeOn(); 
-        motorOff();
-        magnetOff(); 
-
-        if(m_aui32OpFlags[OP_ESTOP] == 0){
-            statusUpdate(STATUS_ESTOP);
-            m_aui32OpFlags[OP_ESTOP] = 1; 
-            m_aui32OpFlags[OP_GO_HOME] = 1;
+        if( !g_ops.awaitEStop                   /* We did't know the button was pressed */
+        ) { 
+            g_ops.awaitEStop = true;            // Wait for the button to be reset
+            g_ops.seekHome = true;              // Go home after that
+            statusUpdate(STATUS_ESTOP);         // Send status to the world
         }
     }
-    
-    return m_aui32OpFlags[OP_ESTOP]; 
+        
+    else                                        /* The system has been enabled */
+    if( g_ops.awaitEStop                        /* We have yet to clear the flag */
+    &&  !g_ops.seekHome                         /* We've already returned home */
+    ) {
+        g_ops.awaitEStop = false;               // Stop waiting for the system to be enabled
+    }
+
+    return g_ops.awaitEStop; 
 }
 
 bool checkDoor() {
     
-    if(g_state.doorOpen) {
-        brakeOn(); 
-        motorOff();
-        if(m_aui32OpFlags[OP_AWAIT_DOOR_CLOSE] == 0) {
-            statusUpdate(STATUS_DOOR_OPEN);
-            m_aui32OpFlags[OP_AWAIT_DOOR_CLOSE] = 1;
-            m_aui32OpFlags[OP_GO_HOME] = 1;
-        }
+    if( g_state.doorOpen                        /* The door is open */
+    ) {  
+        motorOff();                             // Stop moving
+        brakeOn();                              // Apply the brake
+        magnetOff();                            // Turn off the magnet
 
-    } else if(m_aui32OpFlags[OP_AWAIT_DOOR_CLOSE]) {
-        /* TODO: CHECK IF SAFE TO CLEAR */
-        m_aui32OpFlags[OP_AWAIT_DOOR_CLOSE] = 0;
+        if( !g_ops.awaitDoor                    /* We did't know the door was open */
+        ) { 
+            g_ops.awaitDoor = true;             // Wait for the door to close
+            g_ops.seekHome = true;              // Go home after that
+            statusUpdate(STATUS_DOOR_OPEN);     // Send status to the world
+        }
+    } 
+    
+    else                                        /* The door is closed */
+    if( g_ops.awaitDoor                         /* We have yet to clear the flag */
+    &&  !g_ops.seekHome                         /* We've already returned home */
+    ) {
+        g_ops.awaitDoor = false;                // Stop waiting for the door to close
     }
 
-    return m_aui32OpFlags[OP_AWAIT_DOOR_CLOSE];
+    return g_ops.awaitDoor;
 }
 
-bool checkFindHammer() { 
+bool checkHelp() {
 
-    if(m_aui32OpFlags[OP_FIND_HAMMER]) {
+    if( g_ops.awaitHelp                         /* Something bad happened and we need help */
+    ) {
 
-        if(g_state.fistLimit) {
-            motorOff();
-            magnetOn();
-            brakeOff();
-            m_aui32OpFlags[OP_FIND_HAMMER] = 0;
+        if( !g_ops.reqHelp                      /* We have yet to ask for help */
+        ) {
+            g_ops.reqHelp = true;               // Ask for help
+            statusUpdate(STATUS_REQUEST_HELP);  // Send status to the world
         }
-
-        else moveFistDown();
-
     }
-    
-    return m_aui32OpFlags[OP_FIND_HAMMER];
+
+    return g_ops.awaitHelp;
 }
 
-bool checkFindAnvil() {
+bool seekHammer() { 
 
-    if(m_aui32OpFlags[OP_FIND_ANVIL]) {
-
-        if(g_state.anvilLimit) {
-            magnetOn();
-            brakeOff();
-            m_aui32OpFlags[OP_FIND_ANVIL] = 0;
-        } 
-
-        else moveFistDown();
-
+    if( g_state.fistLimit                   /* We found the hammer */
+    &&  g_ops.seekHammer                    /* We were looking for the hammer */
+    ) {
+        motorOff();                         // Stop moving  
+        magnetOn();                         // Grab the hammer
+        brakeOff();                         // Release the brake
+        g_ops.seekHammer = false;           // Stop looking for the hammer
     }
-    
-    return m_aui32OpFlags[OP_FIND_ANVIL];
+
+    else                                    /* We need the hammer */
+    if( !g_ops.seekHammer                   /* We have yet to start looking for the hammer */
+    ){
+        g_ops.seekHammer = true;            // Start looking for the anvil
+        statusUpdate(STATUS_SEEK_HAMMER);   // Send status to the world
+    }
+
+    return g_ops.seekHammer;
+}
+
+bool seekAnvil() {
+
+    if( g_state.anvilLimit                      /* We found the anvil */
+    &&  g_ops.seekAnvil                         /* We were looking for the anvil */
+    ) {
+        motorOff();                             // Stop moving
+        magnetOn();                             // Make sure we're still holding the hammer
+        brakeOff();                             // Make sure the brake is still released
+        g_ops.seekAnvil = false;                // Stop looking for the anvil
+    }
+
+    else                                        /* We need the anvil */
+    if( !g_ops.seekAnvil                        /* We have yet to start looking for the anvil */
+    ) {
+        g_ops.seekAnvil = true;                 // Start looking for the anvil
+        statusUpdate(STATUS_SEEK_ANVIL);        // Send status to the world
+    } 
+
+    return g_ops.seekAnvil;
 }
 
 bool checkGoHome() {
 
-    if(m_aui32OpFlags[OP_GO_HOME]) {
+    if( g_ops.seekHome                          /* We are trying to go home */
+    ) {
 
-        if(!g_state.fistLimit) {
-            m_aui32OpFlags[OP_FIND_HAMMER] = 1;
-            statusUpdate(STATUS_SEEK_HAMMER);
-        }
-
-        else if(!g_state.anvilLimit) {
-            m_aui32OpFlags[OP_FIND_ANVIL] = 1;
-            statusUpdate(STATUS_SEEK_ANVIL);
+        if( seekHammer()                        /* We are seeking the hammer */
+        ||  seekAnvil()                         /* We are seeking the anvil */
+        ) {
+            motorSetSpeedAndCourse();           // Get to steppin'
         }
         
-        else { // WE'RE HOME; CLEAR THE FLAG
-            motorOff();
-            motorSetPositionAsZero();
-            m_aui32OpFlags[OP_GO_HOME] = 0;
+        else                                    /* We're home */ 
+        {
+            motorOff();                         // Stop moving
+            motorSetPositionAsZero();           // Reset our home position
+            g_ops.seekHome = false;             // Stop trying to go home
         }
 
     } 
 
-    return m_aui32OpFlags[OP_GO_HOME];
+    return g_ops.seekHome;
 }
 
 bool checkConfiguration() {
 
-    if(m_aui32OpFlags[OP_AWAIT_CONFIG] && g_config.run) {
-        /* TODO: CHECK IF SAFE TO CLEAR */
-        m_aui32OpFlags[OP_AWAIT_CONFIG] = 0;
+    if( g_config.run                            /* We have been told to run */
+    &&  g_config.cycles > 0                     /* We have a valid cycle setting */
+    &&  g_config.height > 0
+    &&  g_config.height < FIST_HEIGHT_MAX_INCH  /* We have a valid height setting */
+    ) {
+        if( g_ops.awaitConfig                   /* We were waiting for a valid configuration */
+        ) {
+            g_ops.awaitConfig = false;          // Stop waiting for a configuration
+        }   
     }
 
-    if(!g_config.run) {
-        statusUpdate(STATUS_AWAIT_CONFIG);
-        m_aui32OpFlags[OP_AWAIT_CONFIG] = 1;
+    else                                        /* We need to wait for a valid configuration */
+    if( !g_ops.awaitConfig                      /* We didn't know that until now */
+    ){
+        g_ops.awaitConfig = true;               // Start waiting
+        statusUpdate(STATUS_AWAIT_CONFIG);      // Send status to the world
     } 
 
-    return m_aui32OpFlags[OP_AWAIT_CONFIG];
+    return g_ops.awaitConfig;
 }
 
-bool checkRaiseHammer() { /* TODO */
+bool raiseHammer() { /* TODO */
 
-    return m_aui32OpFlags[OP_RAISE_HAMMER];
+    return g_ops.raiseHammer;
 }
 
-bool checkDropHammer() { /* TODO */
+bool dropHammer() { /* TODO */
 
-    return m_aui32OpFlags[OP_DROP_HAMMER];
+    return g_ops.dropHammer;
+}
+
+bool runConfiguration() {
+
+
+
 }
 
 
 int32_t m_i32LastAlarmCheck = 0; 
 int32_t m_i32AlarmCheckPeriod_mSec = 5000; 
-void checkIOAlarms() {
+void runOperations() {
 
     // If we haven't sent state updated in a while, do it 
     if(g_ui32InterruptFlag == 0 && m_i32LastAlarmCheck + m_i32AlarmCheckPeriod_mSec < millis()) {
@@ -250,15 +265,10 @@ void checkIOAlarms() {
 
         // DOOR IS CLOSED; CONTINUE
 
-        if(checkFindHammer()) // SKIP EVERYTHING ELSE UNTIL HAMMER IS FOUND 
+        if(checkHelp()) // SKIP EVERYTHING ELSE UNTIL WE GET HELP
             return;
 
-        // HAMMER IS FOUND; CONTINUE
-
-        if(checkFindAnvil()) // SKIP EVERYTHING ELSE UNTIL ANVIL IS FOUND
-            return;
-
-        // ANVIL IS FOUND; CONTINUE
+        // WE HAVE BEEN HELPED; CONTINUE
 
         if(checkGoHome()) // SKIP EVERYTHING ELSE UNTIL MACHINE IS IN HOME POSITION
             return;
@@ -270,15 +280,7 @@ void checkIOAlarms() {
 
         // CONFIGURED TO RUN; CONTINUE 
 
-        if(checkRaiseHammer()) // SKIP EVERYTHING ELSE UNTIL HAMMER IS RAISED 
-            return;
-
-        // HAMMER IS RAISED; CONTINUE
-
-        if(checkDropHammer()) // SKIP EVERYTHING ELSE UNTIL HAMMER IS DROPPED
-            return;
-
-        // HAMMER IS DROPPED; CONTINUE
+        runConfiguration(); // RUN CONFIGURATION 
         
     }
 }

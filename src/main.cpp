@@ -34,9 +34,9 @@ void loop() {
 
     serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
 
-    checkIOAlarms();
+    runOperations();
 
     /* TODO: REMOVE AFTER DEBUG */
-    motorBackNForth();
+    // motorBackNForth();
     /* TODO: REMOVE AFTER DEBUG */
 }
