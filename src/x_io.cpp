@@ -1,8 +1,11 @@
 #include "x_io.h"
  
 /* INTERRUPTS *****************************************************************************************/
-void setItrState(uint8_t pin, bool *pbPinState, bool bInvert = false) {
-    *pbPinState = ( bInvert ? !(bool)digitalRead(pin) : (bool)digitalRead(pin) );
+bool m_bPrevPinState = false;
+bool setItrState(uint8_t pin, bool *pbPinState, bool bInvert = false) {
+    m_bPrevPinState = *pbPinState;
+    *pbPinState = (bInvert ? !(bool)digitalRead(pin) : (bool)digitalRead(pin));
+    return (m_bPrevPinState != *pbPinState);
 }
 
 void checkAllLimits() {
@@ -21,20 +24,15 @@ hw_timer_t *m_phwTimerDebounce = NULL;
 uint32_t m_aui32ItrCheck[ITR_PIN_COUNT]; 
 uint32_t m_ui32NowMillis;
 uint32_t g_ui32InterruptFlag = 0;
-bool m_bPrevPinState = false;
 void itrClearCheck(eItrCheckMap_t eChk, uint8_t pin, bool *pbPinState, bool bInvert = false) { 
 
     if ( ( m_aui32ItrCheck[eChk] == 0 ) || ( m_aui32ItrCheck[eChk] > m_ui32NowMillis ) ) 
         return;
 
     else {
-        m_bPrevPinState = *pbPinState;
-
-        setItrState(pin, pbPinState, bInvert);
-        // *pbPinState = ( bInvert ? !(bool)digitalRead(pin) : (bool)digitalRead(pin) );
         m_aui32ItrCheck[eChk] = 0; 
 
-        if ( m_bPrevPinState != *pbPinState )
+        if (setItrState(pin, pbPinState, bInvert)) 
             g_ui32InterruptFlag = 1;
     }
 }
@@ -137,14 +135,14 @@ void setupRelayControl() {
 /* MOTOR CONTROL ***********************************************************************************/
 ESP_FlexyStepper m_motor;
 
-void setMotorSpeed(int stepsPerSec) {
+void motorSetSpeed(int stepsPerSec) {
     if (stepsPerSec > MOT_STEPS_PER_SEC_HIGH) { stepsPerSec = MOT_STEPS_PER_SEC_HIGH; }
     m_motor.setSpeedInStepsPerSecond(stepsPerSec);
     m_motor.setAccelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
     m_motor.setDecelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
 }
 
-void setPositionAsZero() {
+void motorSetPositionAsZero() {
     m_motor.setCurrentPositionInSteps(0);
 }
 
@@ -162,7 +160,7 @@ void setupMotor() {
     pinMode(PIN_OUT_MOT_EN, OUTPUT);
     
     m_motor.connectToPins(PIN_OUT_MOT_STEP, PIN_OUT_MOT_DIR);
-    setMotorSpeed(MOT_STEPS_PER_SEC_LOW);
+    motorSetSpeed(MOT_STEPS_PER_SEC_LOW);
     m_motor.startAsService(MOT_SERVICE_CORE);
 
     motorOff();
@@ -176,70 +174,68 @@ void setupMotor() {
 /* MOTOR CONTROL *** END *************************************************************************/
 
 
-/* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ 
-#ifdef TEST_STEP_DRIVER
-int32_t m_steps = 0;
+int32_t m_i32StepsTarget = 0;
 int32_t m_i32MotorPosSteps = 0;
 int32_t m_i32LastPosUpdate = 0;
 int32_t m_i32PosUpdatePeriod_mSec = 500;
-void motorGetPosition() {
+int32_t motorGetPosition() {
     m_i32MotorPosSteps = m_motor.getCurrentPositionInSteps();
     g_state.currentHeight = ((float)m_i32MotorPosSteps / MOT_STEP_PER_REV) * FIST_INCH_PER_REV;
     m_i32LastPosUpdate = millis();
     setMQTTPubFlag(PUB_MOTPOS);
 }
- 
+
+void motorMoveRelativeSteps(int32_t steps) { m_motor.setTargetPositionRelativeInSteps(steps); }
+bool motorTargetReached() { return (m_motor.getDistanceToTargetSigned() == 0); }
+
+/* TODO: UNDEFINE TEST_STEP_DRIVER FOR PRODUCTION */ 
+#ifdef TEST_STEP_DRIVER
 void motorBackNForth() {
-    if(g_config.cycles == 0) 
+    if(!g_config.run) 
         return;
 
     else if(g_state.cyclesCompleted <= g_config.cycles) {
-
 
         if (m_motor.getDistanceToTargetSigned() == 0) {
 
             motorGetPosition();
             
-            // Check we just completed a cycle
-            if(m_steps < 0) {
-                g_state.cyclesCompleted++;
-
-                // Check if we're done
-                if(g_state.cyclesCompleted == g_config.cycles) { // Serial.printf("\nDONE.");
-                    motorOff();
-                    g_state.setStatus((char*)"DONE");
-                    setMQTTPubFlag(PUB_STATE);
-                    g_config.cycles = 0;
-                    m_steps = 0;
-                    return;
-                }
-            }
-
-            // Check if we are starting the fist cycle
-            if(m_steps == 0) { // Serial.printf("\nBEGIN...");
-                m_steps = ( g_config.height / FIST_INCH_PER_REV ) * MOT_STEP_PER_REV;
-                setMotorSpeed(MOT_STEPS_PER_SEC_HIGH);
+            if(m_i32StepsTarget == 0) { // We are starting the fist cycle
+                m_i32StepsTarget = ( g_config.height / FIST_INCH_PER_REV ) * MOT_STEP_PER_REV;
+                motorSetSpeed(MOT_STEPS_PER_SEC_HIGH);
                 motorOn();
                 g_state.setStatus((char*)"BEGIN...");
                 setMQTTPubFlag(PUB_STATE);
-            } else {
-                m_steps *= -1;
-            }
+            } 
+            else if(m_i32StepsTarget < 0) { // We just completed a cycle (down-stroke)
+                g_state.cyclesCompleted++;
 
-            if (m_steps > 0) { // Serial.printf("\nGOING UP");
+                if(g_state.cyclesCompleted == g_config.cycles) { // That was the last cycle
+                    motorOff();
+                    g_state.setStatus((char*)"DONE");
+                    setMQTTPubFlag(PUB_STATE);
+                    g_config.run = false;
+                    m_i32StepsTarget = 0;
+                    return; 
+                }
+
+                // Go again (up-stroke)
                 g_state.setStatus((char*)"GOING UP");
                 magnetOn();
                 brakeOff();
 
-            } else { // Serial.printf("\nGOING DOWN");
+            } else { 
+                // We're at the top; DROP THE HAMMER!... and then go get it.
                 g_state.setStatus((char*)"GOING DOWN");
                 magnetOff();
                 brakeOn(); 
             }
+
             setMQTTPubFlag(PUB_STATE);
 
-            delay(100); // Serial.printf("\nm_steps: %d", m_steps);
-            m_motor.setTargetPositionRelativeInSteps(m_steps);
+            delay(100); // Serial.printf("\nm_steps: %d", m_i32StepsTarget);
+            m_i32StepsTarget *= -1;
+            m_motor.setTargetPositionRelativeInSteps(m_i32StepsTarget);
 
         } 
 

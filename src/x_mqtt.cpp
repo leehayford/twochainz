@@ -32,9 +32,17 @@ void mqttPublishMotorPosition() {
 
 /* MQTT Subscriptions *************************************************************************************/
 mqttSubscription m_mqttSubs[N_SUBS] = {
+    {(char*)"esp32/cmd/report", (mqttCMDFunc)&mqttHandleCMDReport},
     {(char*)"esp32/cmd/state", (mqttCMDFunc)&mqttHandleCMDState},
     {(char*)"esp32/cmd/config", (mqttCMDFunc)&mqttHandleCMDConfig},
 };
+
+void mqttHandleCMDReport(char* msg) {
+    setMQTTPubFlag(PUB_CONFIG);
+    setMQTTPubFlag(PUB_STATE);
+    setMQTTPubFlag(PUB_MOTPOS);
+}
+
 void mqttHandleCMDState(char* msg) { 
     setMQTTPubFlag(PUB_STATE);
 }
@@ -43,7 +51,7 @@ void mqttHandleCMDConfig(char* msg) {
     g_config.parseFromJSON(msg);
     g_state.cyclesCompleted = 0;
     g_state.currentHeight = 0.0; /* TODO: CHECK / GO HOME FIRST */
-    setPositionAsZero();
+    motorSetPositionAsZero();
     setMQTTPubFlag(PUB_CONFIG);
     setMQTTPubFlag(PUB_STATE);
     setMQTTPubFlag(PUB_MOTPOS);

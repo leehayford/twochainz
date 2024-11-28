@@ -6,9 +6,11 @@
 
 /* ALARMS *********************************************************************************************/
 #define STATUS_START "Move Bitch! Get out the way!"
-#define STATUS_READY "READY; ALARMS CLEARED"
 #define STATUS_ESTOP "EMERGENCEY STOP"
 #define STATUS_DOOR_OPEN "DOOR OPEN"
+#define STATUS_SEEK_HAMMER "SEEKING HAMMER"
+#define STATUS_SEEK_ANVIL "SEEKING ANVIL"
+#define STATUS_AWAIT_CONFIG "READY FOR CONFIGURATION"
 #define STATUS_FIST_OPEN "FIST OPEN"
 #define STATUS_ANVIL_LIMIT "ANVIL CONTACT"
 #define STATUS_TOP_LIMIT "TOP LIMIT FAULT"

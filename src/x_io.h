@@ -85,9 +85,11 @@ extern void motorBackNForth();
 
 extern void motorOff();
 extern void motorOn();
-extern void setMotorSpeed(int stepsPerSec);
-extern void setPositionAsZero();
-
+extern void motorSetSpeed(int stepsPerSec);
+extern void motorSetPositionAsZero();
+extern void motorMoveRelativeSteps(int32_t steps);
+extern bool motorTargetReached();
+extern int32_t motorGetPosition();
 /* MOTOR CONTROL *** END *************************************************************************/
 
 
