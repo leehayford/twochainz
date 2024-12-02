@@ -125,6 +125,7 @@ void IRAM_ATTR debounce(eItrCheckMap_t eChk);
 
 #define DOUT_PIN_ACTIVE_LOW true
 #define DOUT_PIN_ACTIVE_HIGH false
+#define DOUT_SANS_STATE false
 
 #define N_DOUT_PINS 5
 typedef enum {
@@ -136,25 +137,29 @@ typedef enum {
 } eDOUTPinMap_t;
 
 class DOUTPin {
+private:
+    bool bHasReadableState;                 // Correspondsd to State.memberName: Default --> true
 
 public:
     uint8_t pin;                            // GPIO Pin number: Required at initialization 
-    bool *pbPinState;                       // &(bool)State.memberName: Default --> NULL 
+    bool *pbPinState;                       // &(bool)State.memberName 
     bool bActiveLow;                        // Ativation state: Default --> DOUT_PIN_ACTIVE_LOW
 
     DOUTPin( 
         uint8_t p, 
-        bool *ps = NULL,                    // &(bool)State.memberName: Default --> NULL            
-        bool a = DOUT_PIN_ACTIVE_LOW        // Activation: Default --> DOUT_PIN_ACTIVE_LOW    
+        bool *ps,                           // &(bool)State.memberName            
+        bool a = DOUT_PIN_ACTIVE_LOW,       // Activation: Default --> DOUT_PIN_ACTIVE_LOW 
+        bool hrs = true                     // Correspondsd to State.memberName: Default --> true
     ) {
         pin = p;
         pbPinState = ps;
         bActiveLow = a;
+        bHasReadableState = hrs;
     }
 
     void checkPin() {
 
-        if( *pbPinState                     /* This pin has a corresponding &(bool)State.memberName */
+        if( bHasReadableState               /* This pin has a corresponding &(bool)State.memberName */
         ) {
             *pbPinState = ( bActiveLow                  
                 ? !(bool)digitalRead(pin)   // ACTIVE LOW --> TRUE (ENABLED) when pin is LOW
@@ -166,8 +171,8 @@ public:
     void enable() {
 
         digitalWrite(pin, ( bActiveLow 
-            ? LOW                       // ACTIVE LOW --> TRUE (ENABLED) when pin is LOW
-            : HIGH                      // ACTIVE HIGH --> TRUE (ENABLED) when pin is HIGH
+            ? LOW                           // ACTIVE LOW --> TRUE (ENABLED) when pin is LOW
+            : HIGH                          // ACTIVE HIGH --> TRUE (ENABLED) when pin is HIGH
         ));
         checkPin();
 

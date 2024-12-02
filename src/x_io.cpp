@@ -47,7 +47,7 @@ void IRAM_ATTR isrDebounceTimerFunc() {
 
     m_ui32NowMillis = millis();                     // Get the time right now; once
 
-    for(ITRPin &itr : itrPins                         /* Loop through the interrupt pins */
+    for(ITRPin &itr : itrPins                       /* Loop through the interrupt pins */
     ) {                       
         itr.obj.itrCheck(m_ui32NowMillis);          // Check 'em
     }
@@ -59,7 +59,7 @@ void setupInterrupts() {
 
     g_ui32InterruptFlag = false;                    // Initialize global interrupt flag
 
-    for(ITRPin &itr : itrPins) {                      // Initialize interrupt pins
+    for(ITRPin &itr : itrPins) {                    // Initialize interrupt pins
 
         pinMode(itr.obj.pin, INPUT_PULLUP);         // This pin is an input with internal pull-up
 
@@ -107,10 +107,10 @@ DOUTPin outPins[N_DOUT_PINS] = {
     {   PIN_OUT_MOT_EN, &g_state.motorOn, DOUT_PIN_ACTIVE_LOW
     },
 
-    {   PIN_OUT_MOT_STEP,
+    {   PIN_OUT_MOT_STEP, nullptr, NULL, DOUT_SANS_STATE
     },
 
-    {   PIN_OUT_MOT_DIR,
+    {   PIN_OUT_MOT_DIR, nullptr, NULL, DOUT_SANS_STATE
     }
 };
 
