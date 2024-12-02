@@ -36,6 +36,8 @@ typedef struct {char* topic; mqttCMDFunc func;} mqttSubscription;
 typedef void (*mqttPubFunc) ();
 typedef struct {char* topic; int flag; mqttPubFunc func;} mqttPublication;
 
+extern char* mqttTopic(const char* prfx, const char* topic);
+
 typedef void (*mqttCallBackFunc) (char* topic, byte* message, unsigned int length);
 extern void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCallBackFunc func);
 

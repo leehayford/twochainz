@@ -18,4 +18,8 @@
 #define STATUS_TOP_LIMIT "TOP LIMIT FAULT"
 #define STATUS_PRESSURE "BRAKE PRESSURE FAULT"
 
+
+extern void setupOps();
+extern void runOperations();
+
 #endif /* X_MACHINE_H */

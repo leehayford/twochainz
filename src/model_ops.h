@@ -7,6 +7,7 @@
 
 class Ops {
 protected:
+
     const char* awaitEStopKey = "\"await_estop\":";
     const char* awaitDoorKey = "\"await_door\":";
     const char* awaitConfigKey = "\"await_config\":";
@@ -20,7 +21,11 @@ protected:
 
     const char* raiseHammerKey = "\"raise_hammer\":";
     const char* dropHammerKey = "\"drop_hammer\":";
+
+    const char* cyclesCompletedKey = "\"cycles_completed\":";
     
+    const char* statusKey = "\"status\":";
+
     char jsonOut[MQTT_PUB_BUFFER_SIZE];
 
 public:
@@ -39,6 +44,10 @@ public:
     bool raiseHammer;
     bool dropHammer;
 
+    int cyclesCompleted;
+
+    char status[JSON_FIELD_STRING_LENGTH];
+
     Ops(
         bool aw_es = false,
         bool aw_dr = false,
@@ -52,7 +61,11 @@ public:
         bool sk_hom = false,
         
         bool drp_hmr = false,
-        bool ras_hmr = false
+        bool ras_hmr = false,
+
+        int cycles = 0,
+
+        const char stat[JSON_FIELD_STRING_LENGTH]="initialized"
     ) {
         awaitEStop = aw_es;
         awaitDoor = aw_dr;
@@ -67,7 +80,31 @@ public:
 
         raiseHammer = ras_hmr;
         dropHammer = drp_hmr;
-    };
+
+        cyclesCompleted = cycles;
+
+        strcpy(status, stat);
+    }
+ 
+    void setStatus(const char stat[JSON_FIELD_STRING_LENGTH]) {
+        strcpy(status, stat);
+    }
+
+    void clearProgress() {
+        cyclesCompleted = 0;
+        seekHammer = true;
+        seekAnvil = true;
+        seekHome = true;
+    }
+
+    void cmdReset() {
+        clearProgress();
+        awaitHelp = false;
+    }
+
+    void cmdContinue() {
+        awaitHelp = false;
+    }
 
     void parseFromJSON(const char* jsonString) {
         jsonParseBool(jsonString, awaitEStopKey, awaitEStop);
@@ -83,6 +120,10 @@ public:
 
         jsonParseBool(jsonString, raiseHammerKey, raiseHammer);
         jsonParseBool(jsonString, dropHammerKey, dropHammer);
+
+        jsonParseInt(jsonString, cyclesCompletedKey, cyclesCompleted);
+        
+        jsonParseString(jsonString, statusKey, status, sizeof(status));
     }
         
     char* serializeToJSON() {
@@ -100,7 +141,11 @@ public:
         jsonSerializeBool(jsonOut, seekHomeKey, seekHome); 
 
         jsonSerializeBool(jsonOut, raiseHammerKey, raiseHammer); 
-        jsonSerializeBool(jsonOut, dropHammerKey, dropHammer); 
+        jsonSerializeBool(jsonOut, dropHammerKey, dropHammer);
+
+        jsonSerializeInt(jsonOut, cyclesCompletedKey, cyclesCompleted);
+        
+        jsonSerializeString(jsonOut, statusKey, status); 
 
         jsonSerializeEnd(jsonOut);
         return jsonOut;
@@ -108,6 +153,28 @@ public:
     
     void debugPrintJSON() {
         Serial.printf("Ops.debugPrintJSON() :\n%s\n\n", jsonOut);
+    }
+
+    void debugPrintValues() {
+        Serial.printf("Ops.debugPrintValues() :\n");
+
+        Serial.printf("Await EStop Clear: %s\n", btoa(awaitEStop));
+        Serial.printf("Await Door Close: %s\n", btoa(awaitDoor));
+        Serial.printf("Await Configuration: %s\n", btoa(awaitConfig));
+        Serial.printf("Request Help: %s\n", btoa(reqHelp));
+        Serial.printf("Await Help: %s\n", btoa(awaitHelp));
+        Serial.printf("Recovery Mode: %s\n", btoa(recovery));
+
+        Serial.printf("Seek Hammer: %s\n", btoa(seekHammer));
+        Serial.printf("Seek Anvil: %s\n", btoa(seekAnvil));
+        Serial.printf("Seek Home: %s\n", btoa(seekHome));
+        
+        Serial.printf("Raise Hammer: %s\n", btoa(raiseHammer));
+        Serial.printf("Drop Hammer: %s\n", btoa(dropHammer));
+
+        Serial.printf("Cycles completed: %d\n", cyclesCompleted);
+
+        Serial.printf("Status: %s\n\n", status);
     }
 };
 

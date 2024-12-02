@@ -19,15 +19,19 @@ void setup() {
 
     setupWiFi(SECRET_WIFI_SSID, SECRET_WIFI_PW);
 
-    setupIO();
-
     setupMQTT_X(SECRET_MQTT_BROKER, SECRET_MQTT_PORT);
 
     // runWSServer((wsMsgHandleFunc)&wsMessageHandler);
-    checkAllLimits();
-    g_state.setStatus(STATUS_START);
+
+    setupIO();
+
+    setupOps();
+    
+    checkStateIOPins();
+    g_ops.setStatus(STATUS_START);
     setMQTTPubFlag(PUB_STATE);
     setMQTTPubFlag(PUB_CONFIG);
+    setMQTTPubFlag(PUB_OPS);
 }
 
 void loop() {

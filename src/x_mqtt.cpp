@@ -2,46 +2,62 @@
 
 
 /* MQTT Pubclications *************************************************************************************/
-mqttPublication m_mqttPubs[N_PUBS] = {
-    {(char*)"esp32/sig/state", 0, (mqttPubFunc)&mqttPublishState},
-    {(char*)"esp32/sig/config", 0, (mqttPubFunc)&mqttPublishConfig},
-    {(char*)"esp32/sig/error", 0, (mqttPubFunc)&mqttPublishError},
-    {(char*)"esp32/sig/motpos", 0, (mqttPubFunc)&mqttPublishMotorPosition},
-};
+char* SIG = mqttTopic(MQTT_TOPIC_PREFIX, "sig/");
 
 void setMQTTPubFlag(eMqttPubMap_t pub) {
     m_mqttPubs[pub].flag = 1;
 }
 
+mqttPublication m_mqttPubs[N_PUBS] = {
+    {mqttTopic(SIG, "error"), 0, (mqttPubFunc)&mqttPublishError},
+    {mqttTopic(SIG, "state"), 0, (mqttPubFunc)&mqttPublishState},
+    {mqttTopic(SIG, "config"), 0, (mqttPubFunc)&mqttPublishConfig},
+
+    {mqttTopic(SIG, "ops"), 0, (mqttPubFunc)&mqttPublishOps},
+    {mqttTopic(SIG, "ops/pos"), 0, (mqttPubFunc)&mqttPublishOpsPosition},
+};
+
+void mqttPublishError(char* msg) { /* TODO: CREATE ERROR CLASS & INSTANCES */
+    publishMQTTMessage(m_mqttPubs[PUB_ERROR].topic, msg); 
+}
+
 void mqttPublishState() { 
     publishMQTTMessage(m_mqttPubs[PUB_STATE].topic, (char *)g_state.serializeToJSON()); 
 }
+
 void mqttPublishConfig() { 
     publishMQTTMessage(m_mqttPubs[PUB_CONFIG].topic, (char *)g_config.serializeToJSON()); 
 }
-void mqttPublishError() { 
-    publishMQTTMessage(m_mqttPubs[PUB_ERROR].topic, (char *)"ERROR: PLACE HOLDER..."); 
+
+
+void mqttPublishOps() { 
+    publishMQTTMessage(m_mqttPubs[PUB_OPS].topic, (char *)g_ops.serializeToJSON()); 
 }
 
-void mqttPublishMotorPosition() {
+void mqttPublishOpsPosition() {
     char buffer[20]; 
     snprintf(buffer, sizeof(buffer), "%.8f", g_state.currentHeight);
-    publishMQTTMessage(m_mqttPubs[PUB_MOTPOS].topic, buffer);
+    publishMQTTMessage(m_mqttPubs[PUB_OPS_POS].topic, buffer);
 }
 
 
 /* MQTT Subscriptions *************************************************************************************/
+char* CMD = mqttTopic(MQTT_TOPIC_PREFIX, "cmd/");
+
 mqttSubscription m_mqttSubs[N_SUBS] = {
-    {(char*)"esp32/cmd/report", (mqttCMDFunc)&mqttHandleCMDReport},
-    {(char*)"esp32/cmd/state", (mqttCMDFunc)&mqttHandleCMDState},
-    {(char*)"esp32/cmd/config", (mqttCMDFunc)&mqttHandleCMDConfig},
-    {(char*)"esp32/cmd/error", (mqttCMDFunc)&mqttHandleCMDError},
+    {mqttTopic(CMD, "report"), (mqttCMDFunc)&mqttHandleCMDReport},
+    {mqttTopic(CMD, "state"), (mqttCMDFunc)&mqttHandleCMDState},
+    {mqttTopic(CMD, "config"), (mqttCMDFunc)&mqttHandleCMDConfig},
+
+    {mqttTopic(CMD, "ops"), (mqttCMDFunc)&mqttHandleCMDOps},
+    {mqttTopic(CMD, "ops/reset"), (mqttCMDFunc)&mqttHandleCMDOpsReset},
+    {mqttTopic(CMD, "ops/continue"), (mqttCMDFunc)&mqttHandleCMDOpsContinue},
 };
 
 void mqttHandleCMDReport(char* msg) {
     setMQTTPubFlag(PUB_CONFIG);
     setMQTTPubFlag(PUB_STATE);
-    setMQTTPubFlag(PUB_MOTPOS);
+    setMQTTPubFlag(PUB_OPS);
 }
 
 void mqttHandleCMDState(char* msg) { 
@@ -50,16 +66,24 @@ void mqttHandleCMDState(char* msg) {
 
 void mqttHandleCMDConfig(char* msg) {
     g_config.parseFromJSON(msg);
-    g_state.cyclesCompleted = 0;
-    g_state.currentHeight = 0.0; /* TODO: CHECK / GO HOME FIRST */
-    motorSetPositionAsZero();
-    setMQTTPubFlag(PUB_CONFIG);
-    setMQTTPubFlag(PUB_STATE);
-    setMQTTPubFlag(PUB_MOTPOS);
+    g_ops.clearProgress();
+    mqttHandleCMDReport(msg);
 }
 
-void mqttHandleCMDError(char* msg) { /* TODO: CLEAR ERRORS... */
 
+void mqttHandleCMDOps(char* msg) {
+    setMQTTPubFlag(PUB_OPS);
+}
+
+void mqttHandleCMDOpsReset(char* msg) {
+    g_config.cmdReset();
+    g_ops.cmdReset();
+    mqttHandleCMDReport(msg);
+}
+
+void mqttHandleCMDOpsContinue(char* msg) {
+    g_ops.cmdContinue();
+    mqttHandleCMDReport(msg);
 }
 
 /* MQTT General Setup *************************************************************************************/

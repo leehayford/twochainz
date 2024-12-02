@@ -29,6 +29,12 @@ public:
         height = ht;
     }
     
+    void cmdReset() {
+        run = false;
+        cycles = 0;
+        height = 0.0;
+    }
+
     void parseFromJSON(const char* jsonString) {
         jsonParseBool(jsonString, runKey, run);
         jsonParseInt(jsonString, cyclesKey, cycles);
