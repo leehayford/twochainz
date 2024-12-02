@@ -2,3 +2,4 @@
 
 State g_state;
 Config g_config;
+Ops g_ops;

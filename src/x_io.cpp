@@ -5,33 +5,42 @@
 ITRPin itrPins[N_ITR_PINS] = {
 
     {   {PIN_ITR_ESTOP, &g_state.eStop, ITR_PIN_ACTIVE_LOW},  
-        [](){   DINPin::debounce(CHK_ESTOP);    }
+        [](){   debounce(CHK_ESTOP);    }
     }, 
     
     {   {PIN_ITR_DOOR, &g_state.doorOpen, ITR_PIN_ACTIVE_HIGH},  
-        [](){   DINPin::debounce(CHK_DOOR);     }
+        [](){   debounce(CHK_DOOR);     }
     }, 
     
     {   {PIN_ITR_FIST, &g_state.fistLimit, ITR_PIN_ACTIVE_LOW},  
-        [](){   DINPin::debounce(CHK_FIST);     }
+        [](){   debounce(CHK_FIST);     }
     }, 
     
     {   {PIN_ITR_ANVIL, &g_state.anvilLimit, ITR_PIN_ACTIVE_LOW},  
-        [](){   DINPin::debounce(CHK_ANVIL);    }
+        [](){   debounce(CHK_ANVIL);    }
     }, 
     
     {   {PIN_ITR_HOME, &g_state.homeLimit, ITR_PIN_ACTIVE_LOW},  
-        [](){   DINPin::debounce(CHK_HOME);     }
+        [](){   debounce(CHK_HOME);     }
     }, 
     
     {   {PIN_ITR_TOP, &g_state.topLimit, ITR_PIN_ACTIVE_LOW},  
-        [](){   DINPin::debounce(CHK_TOP);      }
+        [](){   debounce(CHK_TOP);      }
     }, 
 
     {   {PIN_ITR_PRESSURE, &g_state.pressure, ITR_PIN_ACTIVE_LOW},  
-        [](){   DINPin::debounce(CHK_PRESSURE); }
+        [](){   debounce(CHK_PRESSURE); }
     }
 };
+
+ void IRAM_ATTR debounce(eItrCheckMap_t eChk) { 
+
+    if( itrPins[eChk].obj.checkTime == 0      /* This a new interrupt event */
+    ) {                                                 
+        itrPins[eChk].obj.checkTime = millis() 
+        + itrPins[eChk].obj.debouncePeriod;   // Schedule the debounce
+    }
+}   
 
 uint32_t m_ui32NowMillis;
 void IRAM_ATTR isrDebounceTimerFunc() {
@@ -44,6 +53,7 @@ void IRAM_ATTR isrDebounceTimerFunc() {
     }
 }
 
+bool g_ui32InterruptFlag = false;
 hw_timer_t *m_phwTimerDebounce = NULL;
 void setupInterrupts() {
 

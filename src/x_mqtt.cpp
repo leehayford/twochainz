@@ -4,10 +4,6 @@
 /* MQTT Pubclications *************************************************************************************/
 char* SIG = mqttTopic(MQTT_TOPIC_PREFIX, "sig/");
 
-void setMQTTPubFlag(eMqttPubMap_t pub) {
-    m_mqttPubs[pub].flag = 1;
-}
-
 mqttPublication m_mqttPubs[N_PUBS] = {
     {mqttTopic(SIG, "error"), 0, (mqttPubFunc)&mqttPublishError},
     {mqttTopic(SIG, "state"), 0, (mqttPubFunc)&mqttPublishState},
@@ -40,6 +36,10 @@ void mqttPublishOpsPosition() {
     publishMQTTMessage(m_mqttPubs[PUB_OPS_POS].topic, buffer);
 }
 
+
+void setMQTTPubFlag(eMqttPubMap_t pub) {
+    m_mqttPubs[pub].flag = 1;
+}
 
 /* MQTT Subscriptions *************************************************************************************/
 char* CMD = mqttTopic(MQTT_TOPIC_PREFIX, "cmd/");

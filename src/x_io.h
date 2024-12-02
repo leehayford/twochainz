@@ -104,21 +104,14 @@ public:
         }
     }
 
-    static void debounce(eItrCheckMap_t eChk) { 
-    
-        if( itrPins[eChk].obj.checkTime == 0      /* This a new interrupt event */
-        ) {                                                 
-            itrPins[eChk].obj.checkTime = millis() 
-            + itrPins[eChk].obj.debouncePeriod;   // Schedule the debounce
-        }
-    }
 };
 
-typedef void IRAM_ATTR (*isrCallBack) ();
-
+typedef void (*isrCallBack) ();
 typedef struct {DINPin obj; isrCallBack func;} ITRPin;
-
 extern ITRPin itrPins[N_ITR_PINS];
+
+void IRAM_ATTR debounce(eItrCheckMap_t eChk);
+
 /* INTERRUPTS *** END ********************************************************************************/
 
 
@@ -161,7 +154,7 @@ public:
 
     void checkPin() {
 
-        if( *pbPinState != NULL             /* This pin has a corresponding &(bool)State.memberName */
+        if( *pbPinState                     /* This pin has a corresponding &(bool)State.memberName */
         ) {
             *pbPinState = ( bActiveLow                  
                 ? !(bool)digitalRead(pin)   // ACTIVE LOW --> TRUE (ENABLED) when pin is LOW

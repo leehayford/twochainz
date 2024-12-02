@@ -4,6 +4,11 @@
 // int32_t m_i32LastPosUpdate = 0;
 // int32_t m_i32PosUpdatePeriod_mSec = 500; 
 
+void statusUpdate(const char* status_msg) {
+    g_ops.setStatus(status_msg);
+    setMQTTPubFlag(PUB_STATE);
+}
+
 
 int32_t m_i32MotorTargetSteps = 0;
 uint32_t m_ui32MotorSpeed = MOT_STEPS_PER_SEC_HIGH;
@@ -63,11 +68,6 @@ void motorSetCoursAndSpeed() {
 }
 
 /* OPERATIONS *****************************************************************************************/
-
-void statusUpdate(const char* status_msg) {
-    g_ops.setStatus(status_msg);
-    setMQTTPubFlag(PUB_STATE);
-}
 
 bool awaitEStopClear() {
     
@@ -244,7 +244,7 @@ bool dropHammer() { /* TODO */
     return g_ops.dropHammer;
 }
 
-bool runConfiguration() { /* TODO */
+void runConfiguration() { /* TODO */
 
     if( g_ops.dropHammer                        /* We dropped the hammer */
     ) {
