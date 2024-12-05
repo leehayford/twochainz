@@ -5,6 +5,10 @@
 #include "dc_esp_server.h"
 #include "dc_json.h"
 
+#define FIST_INCH_PER_REV 6.000
+#define FIST_HEIGHT_MAX_INCH 48.000
+#define FIST_HEIGHT_MAX_STEP 16000 // = ( 48 / 6 ) * 2000
+
 class Config {
 protected:
     const char* runKey = "\"run\":";
@@ -27,6 +31,21 @@ public:
         run = r;
         cycles = cyc;
         height = ht;
+    }
+    
+    bool validate() {
+        return ( 
+            run                                 /* We have been told to run */
+        &&  cycles > 0                          /* We have a valid cycle setting */
+        &&  height > 0
+        &&  height < FIST_HEIGHT_MAX_INCH       /* We have a valid height setting */
+        );
+    }
+
+    void cmdReset() {
+        run = false;
+        cycles = 0;
+        height = 0.0;
     }
     
     void parseFromJSON(const char* jsonString) {

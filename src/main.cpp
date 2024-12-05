@@ -19,15 +19,14 @@ void setup() {
 
     setupWiFi(SECRET_WIFI_SSID, SECRET_WIFI_PW);
 
-    setupIO();
+    // runWSServer((wsMsgHandleFunc)&wsMessageHandler);
 
     setupMQTT_X(SECRET_MQTT_BROKER, SECRET_MQTT_PORT);
 
-    // runWSServer((wsMsgHandleFunc)&wsMessageHandler);
-    checkAllLimits();
-    g_state.setStatus(STATUS_START);
-    setMQTTPubFlag(PUB_STATE);
-    setMQTTPubFlag(PUB_CONFIG);
+    setupIO();
+
+    checkStateIOPins();
+    statusUpdate(STATUS_START);
 }
 
 void loop() {
@@ -36,7 +35,4 @@ void loop() {
 
     runOperations();
 
-    /* TODO: REMOVE AFTER DEBUG */
-    // motorBackNForth();
-    /* TODO: REMOVE AFTER DEBUG */
 }

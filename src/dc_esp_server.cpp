@@ -97,6 +97,11 @@ void sendWSString(String str) {
 WiFiClient m_mqttWiFiClient;
 PubSubClient m_mqttClient(m_mqttWiFiClient);
 
+char* mqttTopic(const char* prfx, const char* topic) {
+    strcat((char *) prfx, topic);
+    return (char*)prfx;
+}
+
 void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCallBackFunc func) {
     m_mqttClient.setBufferSize(MQTT_PUB_BUFFER_SIZE);
     m_mqttClient.setServer(mqttBrokerIP, mqttBrokerPort);
