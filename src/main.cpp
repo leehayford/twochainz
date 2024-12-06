@@ -64,12 +64,15 @@ void setup() {
     statusUpdate(STATUS_START);
 }
 
+Error* opsErr;
 void loop() {
 
     serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
     
     /* TODO: REMOVE FOR PRODUCTION */ runErrorTest();
 
-    runOperations();
+    opsErr = runOperations();
+    if( opsErr
+    )   mqttPublishError(opsErr);
 
 }

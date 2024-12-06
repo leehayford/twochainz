@@ -27,6 +27,6 @@
 
 extern void statusUpdate(const char* status_msg);
 extern void setupOps();
-extern void runOperations();
+extern Error* runOperations();
 
 #endif /* X_MACHINE_H */

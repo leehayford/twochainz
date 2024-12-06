@@ -38,6 +38,16 @@ public:
     }
 };
 
+/* A bool and an Error* */
+typedef struct {bool bRes; Error* err;} sboolErr;
 
+/* A int32 and an Error* */
+typedef struct {int32_t ui32Res; Error* err;} si32Err;
+
+/* A uint32 and an Error* */
+typedef struct {uint32_t ui32Res; Error* err;} sui32Err;
+
+/* A float and an Error* */
+typedef struct {float fRes; Error* err;} sfErr;
 
 #endif /* DC_ERROR_H */

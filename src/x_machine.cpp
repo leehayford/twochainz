@@ -1,5 +1,7 @@
 #include "x_machine.h"
 
+Error* m_pErr;
+
 void statusUpdate(const char* status_msg) {
     g_ops.setStatus(status_msg);
     Serial.printf("\nStatus: %s\n", g_ops.status);
@@ -56,8 +58,10 @@ Error* motorSetCourseAndSpeed() {
     }
 
     if( g_ops.stepTarget == 0                           /* We can't step to that */
-    )   return &ERR_MOT_TARGET_ZERO;
-    
+    ) {  
+        g_ops.recovery = true;
+        return &ERR_MOT_TARGET_ZERO;
+    }
 
     motorOn();                                                    
     motorMoveRelativeSteps(                         // Get to steppin' 
@@ -182,12 +186,12 @@ bool awaitConfig() {
 }
 
 
-void doRaiseHammer() {
+Error* doRaiseHammer() {
     g_ops.raiseHammer = true;                   // We raise the hammer
     magnetOn();                                 // With fist closed
     brakeOff();                                 // With brake off
-    motorSetCourseAndSpeed();                   // Get to steppin'
     statusUpdate(STATUS_RAISE_HAMMER);          // Sing it
+    return motorSetCourseAndSpeed();            // Get to steppin'
 }
 
 void doDropHammer() {
@@ -200,7 +204,7 @@ void doDropHammer() {
 
 /* This funtion is called by calling doGoHome() 
 Returns true until we have secured the hammer */
-bool seekHammer() { 
+sboolErr seekHammer() { 
 
     if( g_state.fistLimit                           /* We found the hammer */
     ) {
@@ -209,8 +213,10 @@ bool seekHammer() {
         
         magnetOn();                                 // Secure the hammer
         g_ops.awaitHammer = false;                  // Stop seeking the hammer
-        return g_ops.awaitHammer;                   // Take the hammer and leave this place!
-        // Our Quest has ended.
+        return {                                    // Take the hammer and leave this place!
+            g_ops.awaitHammer,
+            nullptr
+        };  // Our Quest has ended.
     }
     
     if( !g_ops.awaitHammer                          /* We have yet to seek the hammer */
@@ -220,21 +226,23 @@ bool seekHammer() {
     g_ops.awaitHammer = true;                       // We seek the hammer
     magnetOff();                                    // With fist open
     brakeOn();                                      // With brake on
-    motorSetCourseAndSpeed();                       // Get to steppin'          
-    // Our quest continues...
-    
-    return g_ops.awaitHammer;
+    return {                                        // Get to steppin'
+        g_ops.awaitHammer, 
+        motorSetCourseAndSpeed()
+    };  // Our quest continues...
 }
 
 /* This funtion is called by calling doGoHome() 
 Returns true until we have found the anvil */
-bool seekAnvil() {
+sboolErr seekAnvil() {
 
     if( g_state.anvilLimit                          /* We found the anvil */
     ) {
         g_ops.awaitAnvil = false;                   // Stop seeking the anvil
-        return g_ops.awaitAnvil;                    // Take the anvil and leave this place... no wait that's heavy; I'll go; the anvil is your now... I... don't really know what I'm... I just ummm, don't have anywh- Hey! where are you going? No. Sorry. You've got you own thing. You know what, I'm sure I'll figure it out; don't worry about it...
-        // Our Quest has ended.
+        return {                                    // Take the anvil and leave this place... no wait that's heavy; I'll go; the anvil is your now... I... don't really know what I'm... I just ummm, don't have anywh- Hey! where are you going? No. Sorry. You've got you own thing. You know what, I'm sure I'll figure it out; don't worry about it...
+            g_ops.awaitAnvil,
+            nullptr
+        };  // Our Quest has ended.
     }
 
     if( !g_ops.awaitAnvil                           /* We have yet to seek the anvil */
@@ -244,21 +252,26 @@ bool seekAnvil() {
     g_ops.awaitAnvil = true;                        // We seek the anvil
     magnetOn();                                     // With fist closed
     brakeOff();                                     // With brake off
-    motorSetCourseAndSpeed();                       // Get to steppin'          
-    // Our quest continues...
-    
-    return g_ops.awaitAnvil;
+    return {                                        // Get to steppin'
+        g_ops.awaitAnvil, 
+        motorSetCourseAndSpeed()
+    };  // Our quest continues...
 }
 
 /* Call this funtion to seek home 
 Returns true until we are at home */
-bool doGoHome() {
+sboolErr doGoHome() {
+    sboolErr bErr;
 
-    if( seekHammer()                            /* We seek the hammer */
-    )   return g_ops.awaitHammer;
+    bErr = seekHammer();
+    if( bErr.err                                /* We have failed to seek the hammer */
+    ||  bErr.bRes                               /* We continue to seek the hammer */
+    )   return bErr;
 
-    if( seekAnvil()                             /* We seek the anvil */
-    )   return g_ops.awaitAnvil;                 
+    bErr = seekAnvil();
+    if( bErr.err                                /* We have failed to seek the anvil */
+    ||  bErr.bRes                               /* We continue to seek the anvil */
+    )   return bErr;                
     
     // With both hammer and anvil, we may return home 
 
@@ -268,8 +281,10 @@ bool doGoHome() {
         motorSetPositionAsZero();               // Reset our home position
         g_ops.recovery = false;                 // Clear the recovery flag (in case that's why we sought home)
         g_ops.goHome = false;                   // Stop going home
-        return g_ops.goHome;                             
-        // Our Quest has ended.
+        return {
+            g_ops.goHome,
+            nullptr
+        };// Our Quest has ended.
     }
 
     if( !g_ops.goHome                           /* We have yet to seek home */
@@ -279,11 +294,11 @@ bool doGoHome() {
 
     g_ops.goHome = true;                        // We seek home
     magnetOn();                                 // With fist closed
-    brakeOff();                                 // With brake off
-    motorSetCourseAndSpeed();                   // Get to steppin'              
-    // Our quest continues...
-    
-    return g_ops.goHome;
+    brakeOff();                                 // With brake off 
+    return {                                    // Get to steppin'
+        g_ops.goHome, 
+        motorSetCourseAndSpeed()
+    };  // Our quest continues...
 }
 
 
@@ -310,7 +325,9 @@ bool doSafeStartCheck() { /* TODO: General safety checks */
 }
 
 
-void runConfiguration() { 
+Error* runConfiguration() { 
+
+    sboolErr bErr;
 
     if( motorTargetReached()) {
 
@@ -319,16 +336,21 @@ void runConfiguration() {
         if( g_ops.dropHammer                            /* We've have dropped the hammer */
         ) {
             /* TODO: HAMMERTIME_OUT */ g_ops.awaitDrop = false;
+            
             if( g_ops.awaitDrop                         /* The hammer has yet to fall */
-            )   return;                                 /* TODO: HAMMERTIME_OUT */
+            )   return nullptr;                         /* TODO: HAMMERTIME_OUT */
 
             // The hammer has dropped
             g_ops.cycleCount++;                         // Count it
 
-            if( doGoHome()                              /* We are revtrieving the hammer */
-            )   return;
+            bErr = doGoHome();
+            if( bErr.err                                /* We have failed to retrieve the hammer */
+            )   return bErr.err;
+            
+            if( bErr.bRes                               /* We continue to retrieve the hammer */
+            )   return nullptr;
 
-            // We have collected the hammer and returned home
+            // We have returned home with the hammer
 
             g_ops.dropHammer = false;                   // Stop intending to drop the hammer
 
@@ -338,11 +360,10 @@ void runConfiguration() {
                 g_config.run = false;                   // Stop questing
                 g_ops.stepTarget = 0;
                 statusUpdate((char*)"DONE");
-                return;
+                return nullptr;
             }
 
-            doRaiseHammer();                            // Continue questing
-            return;
+            return doRaiseHammer();                     // Continue questing
         }
 
         if( g_ops.raiseHammer                           /* We've raised the hammer */
@@ -353,7 +374,7 @@ void runConfiguration() {
 
     }
 
-
+    return nullptr;
 
 }
 
@@ -370,8 +391,8 @@ void setupOps() {
 
 int32_t m_i32LastAlarmCheck = 0; 
 int32_t m_i32AlarmCheckPeriod_mSec = 5000; 
-void runOperations() {
-
+Error* runOperations() {
+    Error* err;
     // If we haven't sent state updated in a while, do it 
     // if(g_ui32InterruptFlag == 0 && m_i32LastAlarmCheck + m_i32AlarmCheckPeriod_mSec < millis()) {
     //     checkAllITRPins();
@@ -401,17 +422,18 @@ void runOperations() {
 
 
     if(awaitConfig()) // SKIP EVERYTHING ELSE UNTIL WE ARE CONFIGURED TO RUN 
-        return;
+        return nullptr;
     // CONFIGURED TO RUN; CONTINUE 
 
 
     if(doSafeStartCheck()) // SKIP EVERYTHING ELSE UNTIL IT IS SAFE TO START OPERATIONS  
-        return;
+        return nullptr;
     // SAFE TO START OPERATIONS; CONTINUE
 
 
-    runConfiguration(); // RUN CONFIGURATION 
-
+    err = runConfiguration(); // RUN CONFIGURATION 
+    if( err
+    )   return err;
 
     // if (motorTargetReached()) {
 
@@ -460,5 +482,6 @@ void runOperations() {
 
     }
 
+    return nullptr;
 
 }
