@@ -14,8 +14,11 @@
 
 Error ERR_TEST_ERR("this is a test of the Error class", SUCCES);
 
-Error* errTestFunc(Error* err) {
-    return err;
+Error* errTestFunc(bool forceError) {
+    if( forceError
+    )   return &ERR_TEST_ERR;
+
+    return nullptr;
 }
 
 bool errTestDone = false;
@@ -25,11 +28,11 @@ void runErrorTest() {
     ) {
         Error* err;
 
-        err = errTestFunc(nullptr);
+        err = errTestFunc(false);
         if(err) Serial.printf("\nERROR TEST: You should not be reading this...\n");
         else Serial.printf("\nERROR TEST: Null pointer error worked!\n");
 
-        err = errTestFunc(&ERR_TEST_ERR); 
+        err = errTestFunc(true); 
         if(err                                      /* We got some kind of error */
         ) {
             Serial.printf("\nERROR TEST: Message Text: %s\n", err->getText());
@@ -60,7 +63,6 @@ void setup() {
 
     statusUpdate(STATUS_START);
 }
-
 
 void loop() {
 
