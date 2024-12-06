@@ -2,6 +2,7 @@
 #define X_MQTT_H
 
 #include "dc_esp_server.h"
+#include "dc_error.h"
 #include "x_models.h"
 #include "x_io.h"
 
@@ -19,7 +20,7 @@ extern void setMQTTPubFlag(eMqttPubMap_t pub);
 
 #define N_PUBS 5
 
-void mqttPublishError(char* msg);
+extern void mqttPublishError(Error* err);
 
 void mqttPublishState();
 

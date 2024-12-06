@@ -1,5 +1,7 @@
 #ifndef X_MACHINE_H
 #define X_MACHINE_H
+
+#include "dc_error.h"
 #include "x_models.h"
 #include "x_mqtt.h"
 #include "x_io.h"
@@ -21,6 +23,7 @@
 #define STATUS_TOP_LIMIT "TOP LIMIT FAULT"
 #define STATUS_PRESSURE "BRAKE PRESSURE FAULT"
 #define STATUS_HAMMERTIME_OUT "HAMMER-TIME FAULT"
+
 
 extern void statusUpdate(const char* status_msg);
 extern void setupOps();

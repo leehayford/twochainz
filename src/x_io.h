@@ -2,6 +2,7 @@
 #define X_IO_H
 
 #include <ESP_FlexyStepper.h>
+#include "dc_error.h"
 #include "x_models.h"
 
 /* INTERRUPTS *****************************************************************************************/
@@ -222,10 +223,13 @@ extern void motorOn();
 #define MOT_REVOVERY_STEPS -500 // 1/4 Revolution
 #define MOT_STEP_PER_REV 2000
 
+
+
 extern void motorSetPositionAsZero();
 extern bool motorTargetReached();
 extern bool motorCheckPosition();
 extern void motorSetSpeed(int stepsPerSec);
+
 extern void motorMoveRelativeSteps(int32_t steps, uint32_t stepsPerSec);
 
 /* MOTOR CONTROL *** END *************************************************************************/

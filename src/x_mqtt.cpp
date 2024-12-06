@@ -13,8 +13,8 @@ mqttPublication m_mqttPubs[N_PUBS] = {
     {(char*)"esp32/sig/ops/pos", 0, (mqttPubFunc)&mqttPublishOpsPosition},
 };
 
-void mqttPublishError(char* msg) { /* TODO: CREATE ERROR CLASS & INSTANCES */
-    publishMQTTMessage(m_mqttPubs[PUB_ERROR].topic, msg); 
+void mqttPublishError(Error* err) { /* TODO: CREATE ERROR CLASS & INSTANCES */
+    publishMQTTMessage(m_mqttPubs[PUB_ERROR].topic, (char *)err->getJSON()); 
 }
 
 void mqttPublishState() { 

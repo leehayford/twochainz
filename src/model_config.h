@@ -10,7 +10,7 @@
 #define FIST_HEIGHT_MAX_STEP 16000 // = ( 48 / 6 ) * 2000
 
 class Config {
-protected:
+private:
     const char* runKey = "\"run\":";
     const char* cyclesKey = "\"cycles\":";
     const char* heightKey = "\"height\":";

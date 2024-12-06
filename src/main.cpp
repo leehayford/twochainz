@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "dc_secret.h" // not included in git repo; contains 'SECRET_XXXXXXX' values
 #include "dc_esp_server.h"
+#include "dc_error.h"
 
 #include "x_models.h"
 #include "x_io.h"
@@ -9,6 +10,36 @@
 
 #define SERIAL_BAUD 115200
 #define SERIAL_DELAY 500
+
+
+Error ERR_TEST_ERR("this is a test of the Error class", SUCCES);
+
+Error* errTestFunc(Error* err) {
+    return err;
+}
+
+bool errTestDone = false;
+void runErrorTest() {
+    
+    if( !errTestDone
+    ) {
+        Error* err;
+
+        err = errTestFunc(nullptr);
+        if(err) Serial.printf("\nERROR TEST: You should not be reading this...\n");
+        else Serial.printf("\nERROR TEST: Null pointer error worked!\n");
+
+        err = errTestFunc(&ERR_TEST_ERR); 
+        if(err                                      /* We got some kind of error */
+        ) {
+            Serial.printf("\nERROR TEST: Message Text: %s\n", err->getText());
+            Serial.printf("\nERROR TEST: Message JSON: %s\n\n", err->getJSON());
+            mqttPublishError(err);
+        }
+    
+        errTestDone = true;
+    }
+}
 
 void setup() {
 
@@ -26,12 +57,16 @@ void setup() {
     setupIO();
 
     checkStateIOPins();
+
     statusUpdate(STATUS_START);
 }
+
 
 void loop() {
 
     serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
+    
+    /* TODO: REMOVE FOR PRODUCTION */ runErrorTest();
 
     runOperations();
 

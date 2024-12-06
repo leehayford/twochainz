@@ -110,7 +110,6 @@ void setupDigitalOutputs() {
 /* MOTOR CONTROL ***********************************************************************************/
 ESP_FlexyStepper m_motor;
 
-
 bool motorCheckPosition() {
 
     g_state.motorSteps = m_motor.getCurrentPositionInSteps();
@@ -147,7 +146,7 @@ void motorSetSpeed(int stepsPerSec) {
 
 void motorMoveRelativeSteps(int32_t steps, uint32_t stepsPerSec) {  
     
-    Serial.printf("\nmotorMoveRelativeSteps:\tSTEPS: %d\tSPEED: %d\n", steps, stepsPerSec);                                      
+    Serial.printf("\nx_io motorMoveRelativeSteps:\tSTEPS: %d\tHz: %d\n", steps, stepsPerSec);                                      
     motorSetSpeed(stepsPerSec);                      
     m_motor.setTargetPositionRelativeInSteps(steps); 
 }

@@ -6,7 +6,7 @@
 #include "dc_json.h"
 
 class State {
-protected:
+private:
 
     const char* eStopKey = "\"estop\":";
     const char* doorOpenKey = "\"door_open\":";

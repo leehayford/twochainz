@@ -13,7 +13,9 @@ int32_t m_i32PositionUpdatePeriod_mSec = 300;
 
 // uint32_t m_ui32MotorTargetSteps = 0;
 // uint32_t m_ui32MotorSpeed = MOT_STEPS_PER_SEC_HIGH;
-void motorSetCourseAndSpeed() {
+
+Error ERR_MOT_TARGET_ZERO("motor target steps must not be zero");
+Error* motorSetCourseAndSpeed() {
    
     if( !motorCheckPosition()                           /* We're lost */
     ||  g_ops.recovery                                  /* We're lost and reassissing */
@@ -53,11 +55,16 @@ void motorSetCourseAndSpeed() {
         g_ops.stepHz = MOT_STEPS_PER_SEC_HIGH;          // Set speed to *** FULL RIP ***                  
     }
 
+    if( g_ops.stepTarget == 0                           /* We can't step to that */
+    )   return &ERR_MOT_TARGET_ZERO;
+    
+
     motorOn();                                                    
     motorMoveRelativeSteps(                         // Get to steppin' 
         g_ops.stepTarget,                           // This far
         g_ops.stepHz                                // This fast
     );
+    return nullptr;
 
 }
 
@@ -154,7 +161,7 @@ bool awaitHelp() {
 /* Returns true until a valid configuration is receved */
 bool awaitConfig() {
 
-    if (g_config.validate()                     /* We have a valid configuration */
+    if( g_config.validate()                     /* We have a valid configuration */
     ) {
         if( g_ops.awaitConfig                   /* We were waiting for a valid configuration */
         ) {

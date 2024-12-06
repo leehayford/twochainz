@@ -6,7 +6,7 @@
 #include "dc_json.h"
 
 class Ops {
-protected:
+private:
 
     const char* awaitEStopKey = "\"await_estop\":";
     const char* awaitDoorKey = "\"await_door\":";
