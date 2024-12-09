@@ -225,12 +225,11 @@ extern void motorOn();
 
 
 
-extern void motorSetPositionAsZero();
+extern Error* motorSetPositionAsZero();
+extern Error* motorGetPosition();
+extern Error* motorSetSpeed(uint32_t stepsPerSec);
+extern Error* motorSetCourse(int32_t steps);
 extern bool motorTargetReached();
-extern bool motorCheckPosition();
-extern void motorSetSpeed(int stepsPerSec);
-
-extern void motorMoveRelativeSteps(int32_t steps, uint32_t stepsPerSec);
 
 /* MOTOR CONTROL *** END *************************************************************************/
 

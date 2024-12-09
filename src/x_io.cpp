@@ -110,7 +110,8 @@ void setupDigitalOutputs() {
 /* MOTOR CONTROL ***********************************************************************************/
 ESP_FlexyStepper m_motor;
 
-bool motorCheckPosition() {
+Error ERR_MOT_POS_FIX_LOST("motor position fix has been lost");
+Error* motorGetPosition() {
 
     g_state.motorSteps = m_motor.getCurrentPositionInSteps();
     
@@ -120,37 +121,60 @@ bool motorCheckPosition() {
 
     if( g_state.motorSteps < 0                          /* We're lost */
     ||  g_state.motorSteps > FIST_HEIGHT_MAX_STEP       /* We're lost */
-    )   return false;                                   /* Tell them we.re lost */
+    )   return &ERR_MOT_POS_FIX_LOST;                   /* Tell them we.re lost */
 
-    return true;
+    return nullptr;
 }
 
-void motorSetPositionAsZero() {
+Error ERR_MOT_SET_ZERO_FAILED("motor could no be set to zero");
+Error* motorSetPositionAsZero() {
     m_motor.setCurrentPositionInSteps(0);
-    motorCheckPosition();
+    if( motorGetPosition()
+    )   return &ERR_MOT_SET_ZERO_FAILED;
+
+    return nullptr;
+}
+
+Error ERR_MOT_SPEED_TOO_HIGH("motor target speed is too high", WARNING);
+Error ERR_MOT_SPEED_TOO_LOW("motor target speed is too low", WARNING);
+Error* motorSetSpeed(uint32_t stepsPerSec) {
+
+    Error* err = nullptr;
+
+    if( stepsPerSec > MOT_STEPS_PER_SEC_HIGH            /* We've been instructed poorly */
+    ) { 
+        stepsPerSec = MOT_STEPS_PER_SEC_HIGH;           // We know better
+        err = &ERR_MOT_SPEED_TOO_HIGH;                  // We level a warning
+    }
+
+    else 
+    if( stepsPerSec < 1                                 /* We've been instructed poorly */
+    ) { 
+        stepsPerSec = MOT_STEPS_PER_SEC_LOW;            // We know better
+        err = &ERR_MOT_SPEED_TOO_LOW;                   // We level a warning
+    }
+
+    m_motor.setSpeedInStepsPerSecond(stepsPerSec);
+    m_motor.setAccelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
+    m_motor.setDecelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
+
+    return err;
+}
+
+Error ERR_MOT_TARGET_ZERO("motor target steps must not be zero");
+Error* motorSetCourse(int32_t steps) {  
+    
+    if( steps == 0                                      /* We can't step to that */
+    )   return &ERR_MOT_TARGET_ZERO;                    // We must protest
+
+    m_motor.setTargetPositionRelativeInSteps(steps); 
+
+    return nullptr;
 }
 
 bool motorTargetReached() { 
     return (m_motor.getDistanceToTargetSigned() == 0); 
 }
-
-void motorSetSpeed(int stepsPerSec) {
-    if( stepsPerSec > MOT_STEPS_PER_SEC_HIGH            /* We've been instructed poorly */
-    ) { 
-        stepsPerSec = MOT_STEPS_PER_SEC_HIGH;           // We know better
-    }
-    m_motor.setSpeedInStepsPerSecond(stepsPerSec);
-    m_motor.setAccelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
-    m_motor.setDecelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
-}
-
-void motorMoveRelativeSteps(int32_t steps, uint32_t stepsPerSec) {  
-    
-    Serial.printf("\nx_io motorMoveRelativeSteps:\tSTEPS: %d\tHz: %d\n", steps, stepsPerSec);                                      
-    motorSetSpeed(stepsPerSec);                      
-    m_motor.setTargetPositionRelativeInSteps(steps); 
-}
-
 
 void setupMotor() {
     m_motor.connectToPins(doutMotStep.pin, doutMotDir.pin);

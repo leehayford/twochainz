@@ -13,63 +13,62 @@ void statusUpdate(const char* status_msg) {
 int32_t m_i32NextPositionUpdate = 0;
 int32_t m_i32PositionUpdatePeriod_mSec = 300;
 
-// uint32_t m_ui32MotorTargetSteps = 0;
-// uint32_t m_ui32MotorSpeed = MOT_STEPS_PER_SEC_HIGH;
+void doEngageRecoveryMode() {
+    g_ops.recovery = true;
+    g_ops.awaitHelp = true;
+    statusUpdate(STATUS_RECOVERY);
+}
 
-Error ERR_MOT_TARGET_ZERO("motor target steps must not be zero");
-Error* motorSetCourseAndSpeed() {
+void getRecoveryCourseAndSeed() {
+    g_ops.stepTarget = MOT_REVOVERY_STEPS;      // We will do 1/4 revolution (DOWN) and reassess
+    g_ops.stepHz = MOT_STEPS_PER_SEC_LOW;       // We will proceed at SLOW rip 
+}
+
+void getHomeCourseAndSeed() {                   
+    g_ops.stepTarget = g_state.motorSteps * -1; // We set our course for home (DOWN)
+    g_ops.stepHz = MOT_STEPS_PER_SEC_HIGH;      // We will proceed at FULL RIP! 
+}
+
+void getQuestCourseAndSpeed() {
+    g_ops.stepTarget =                          // We set our course for the height of configuration (UP)
+        (g_config.height / FIST_INCH_PER_REV) * MOT_STEP_PER_REV;
+    g_ops.stepHz = MOT_STEPS_PER_SEC_HIGH;      // We will proceed at FULL RIP!  
+}
+ 
+Error* moveToTarget() {
    
-    if( !motorCheckPosition()                           /* We're lost */
-    ||  g_ops.recovery                                  /* We're lost and reassissing */
-    ) {  
-        if( !g_ops.recovery                             /* We didn't know we were lost */
-        ) {   
-            g_ops.awaitHelp = true;                     // We need an operator to tell us it's ok to continue            
-            g_ops.recovery = true;                      // Come back and reassess until we've been home
-            statusUpdate(STATUS_RECOVERY);              // Sing it
-        }
-        
-        g_ops.stepTarget = MOT_REVOVERY_STEPS;          // Do 1/4 revolution (DOWN) and reassess
-        g_ops.stepHz = MOT_STEPS_PER_SEC_LOW;           // Set speed to *** SLOW ***
-    }
+    Error* err;
 
-    else                                                /* We assume we're on track */
-    {   
-        // Serial.printf("\nSetCourseAndSpeed: ON TRAK \n");                                                
-        if( g_ops.awaitHammer                           /* We need to go DOWN */
-        ||  g_ops.awaitAnvil                            /* We need to go DOWN */
-        ||  g_ops.goHome                                /* We need to go DOWN */
-        ) {  
-            g_ops.stepTarget =                          // Go DOWN 
-                g_state.motorSteps * -1;                // To zero height
-            // Serial.printf("\nSetCourseAndSpeed: GO HOME : %d\n", g_ops.stepTarget); 
-        }
+    if( g_ops.recovery                          /* We are lost and being guided home */
+    )   getRecoveryCourseAndSeed();             // We will move as we are guided
 
+    else {
+        err = motorGetPosition();               // We take a bearing
+        if( err                                 /* We discover we are lost */
+        )   return err;                         // We will seek the guidance of a greater power 
+
+        /* We must assume we're on track */
+                                                        
+        if( g_ops.goHome                        /* We've been ordered home */
+        )   getHomeCourseAndSeed();             // We will make for home                     
+                                                
         else                                            
-        if( g_ops.raiseHammer                           /* We need to go UP */
-        ) {   
-            g_ops.stepTarget =                          // Go UP 
-                (g_config.height / FIST_INCH_PER_REV)   // To configured height
-                * MOT_STEP_PER_REV;      
-            // Serial.printf("\nSetCourseAndSpeed: RAISE HAMMER : %d\n", g_ops.stepTarget);       
-        } 
+        if( g_ops.raiseHammer                   /* We've been ordered to raise the hammer */
+        )   getQuestCourseAndSpeed();           // We will make for the heigh of configuration
+    }     
+                                                                 
+    motorOn();                                  // Make ready our steed! 
 
-        g_ops.stepHz = MOT_STEPS_PER_SEC_HIGH;          // Set speed to *** FULL RIP ***                  
-    }
+    err = motorSetSpeed(g_ops.stepHz);
+    if( err                                     /* We have been given a warning */
+    )   mqttPublishError(err);                  // We pass along the warning
 
-    if( g_ops.stepTarget == 0                           /* We can't step to that */
-    ) {  
-        g_ops.recovery = true;
-        return &ERR_MOT_TARGET_ZERO;
-    }
+    Serial.printf("\nx_machine moveToTarget:\tSTEPS: %d\tHz: %d\n", g_ops.stepTarget, g_ops.stepHz);   
+    err = motorSetCourse(g_ops.stepTarget);     // Get to steppin'
+    if( err                                     
+    )   doEngageRecoveryMode();
 
-    motorOn();                                                    
-    motorMoveRelativeSteps(                         // Get to steppin' 
-        g_ops.stepTarget,                           // This far
-        g_ops.stepHz                                // This fast
-    );
-    return nullptr;
-
+    return err;
 }
 
 /* OPERATIONS *****************************************************************************************/
@@ -143,16 +142,16 @@ bool awaitDoorClose() {
 bool awaitHelp() {
 
     if( g_ops.awaitHelp                         /* Something bad happened and we need help */
-    &&  !g_ops.reqHelp                          /* We have yet to ask for help */
+    &&  !g_ops.seekHelp                          /* We have yet to ask for help */
     ) {
-        g_ops.reqHelp = true;                   // Ask for help
+        g_ops.seekHelp = true;                   // Ask for help
         statusUpdate(STATUS_REQUEST_HELP);      // Sing it
     }
     
-    if( g_ops.reqHelp                           /* We have requested help */
+    if( g_ops.seekHelp                           /* We have requested help */
     &&  !g_ops.awaitHelp                        /* We have received help */
     ) {
-        g_ops.reqHelp = false;                  // Stop requesting help
+        g_ops.seekHelp = false;                  // Stop requesting help, lest you look like a fool!
 
         // These flags will be cleared in the doGoHome function
         g_ops.recovery = true;                  // We must be cautious 
@@ -170,8 +169,7 @@ bool awaitConfig() {
         if( g_ops.awaitConfig                   /* We were waiting for a valid configuration */
         ) {
             g_ops.clearProgress();              // Prepare to start a new campaign 
-            g_ops.awaitConfig = false;          // Stop waiting for a configuration
-            g_ops.awaitStart = true;            // We must check some things before we begin
+            g_ops.awaitConfig = false;          // We stop awaiting configuration, lest we look like fools!
         }
     }
 
@@ -185,191 +183,224 @@ bool awaitConfig() {
     return g_ops.awaitConfig;
 }
 
+/* This funtion is called by doGoHome() 
+Returns an error if we fail to secure the hammer 
+Sets g_ops.seekHammer = false once we secure the hammer */
+Error* doSeekHammer() { 
+
+    if( g_state.fistLimit                       /* We found the hammer */
+    ) {
+        if( g_ops.seekHammer                    /* We were seeking the hammer */
+        )   motorOff();                         // Stop moving while we secure the hammer 
+        
+        magnetOn();                             // Secure the hammer
+        g_ops.seekHammer = false;               // Stop seeking the hammer, lest you look like a fool!
+        return nullptr;                         // Take the hammer and leave this place! 
+        // Our search has ended.
+    }
+    
+    if( !g_ops.seekHammer                       /* We have yet to seek the hammer */
+    )   statusUpdate(STATUS_SEEK_HAMMER);       // Sing it
+        // Our search begins!
+
+    g_ops.seekHammer = true;                    // We seek the hammer
+    magnetOff();                                // With fist open
+    brakeOn();                                  // With brake on
+    return moveToTarget();                       // Get to steppin'
+    // Our search continues...
+}
+
+/* This funtion is called by doGoHome() 
+Returns an error if we fail to find the anvil 
+Sets g_ops.seekAnvil = false once we find the anvil */
+Error* doSeekAnvil() {
+
+    if( g_state.anvilLimit                      /* We found the anvil */
+    ) {
+        g_ops.seekAnvil = false;                // Stop seeking the anvil, lest you look like a fool!
+        return nullptr;                         // Take the anvil and leave this place... no wait that's heavy; I'll go; the anvil is your now... I... don't really know what I'm... I just ummm, don't have anywh- Hey! where are you going? No. Sorry. You've got you own thing. You know what, I'm sure I'll figure it out; don't worry about it...
+        // Our search has ended.
+    }
+
+    if( !g_ops.seekAnvil                        /* We have yet to seek the anvil */
+    )   statusUpdate(STATUS_SEEK_ANVIL);        // Sing it
+        // Our search begins!
+
+    g_ops.seekAnvil = true;                     // We seek the anvil
+    magnetOn();                                 // With fist closed
+    brakeOff();                                 // With brake off
+    return moveToTarget();                       // Get to steppin'
+    // Our search continues...
+}
+
+/* This funtion is called by doGoHome() 
+Returns an error if we fail to find home 
+Sets g_ops.seekHome = false once we find home */
+Error* doSeekHome() {
+        
+    if( g_state.homeLimit                       /* We found home */
+    ) {
+        g_ops.seekHome = false;                 // Stop seeking home, lest you look like a fool!
+        return nullptr;                         //      
+        // Our search has ended.
+    }
+
+    if( !g_ops.seekHome                         /* We have yet to seek home */
+    )   statusUpdate(STATUS_SEEK_HOME);         // Sing it
+        // Our search begins!
+
+    g_ops.seekHome = true;                      // We seek home
+    magnetOn();                                 // With fist closed
+    brakeOff();                                 // With brake off
+    return moveToTarget();                       // Get to steppin'
+    // Our search continues...
+}
+
+/* Call this funtion to seek home 
+Returns an error if we fail to return home with the hammer 
+sets g_ops.goHome = false once we return home with the hammer */
+Error* doGoHome() {
+    Error* err;
+
+    err = doSeekHammer();
+    if( err                                     /* We have failed to seek the hammer */
+    )   return err;                             // We make our failure known
+
+    if( g_ops.seekHammer                        /* We continue to seek the hammer */
+    )   return nullptr;                         // We go no further without the hammer
+
+    // With the hammer secure in our fist, we seek the anvil
+
+    err = doSeekAnvil();
+    if( err                                     /* We have failed to seek the anvil */
+    )   return err;                             // We make our failure known
+    
+    if( g_ops.seekAnvil                         /* We continue to seek the anvil */
+    )   return nullptr;                         // We go no further without the anvil
+    
+    // With the hammer secure and the anvil found, we seek home 
+
+    err = doSeekHome();
+    if( err                                     /* We have failed to seek home */
+    )   return err;                             // We make our failure known
+    
+    if( g_ops.seekHome                          /* We continue to seek home */
+    )   return nullptr;                         // We go no further without finding home
+
+    // We are home, with hammer secured, and anvil found
+
+    motorOff();                                 // Stop moving
+    motorSetPositionAsZero();                   // Reset our home position
+    g_ops.recovery = false;                     // Clear the recovery flag (in case that's why we sought home)
+    g_ops.goHome = false;                       // Stop going home
+    return nullptr;
+    // This leg of our quest has ended.
+}
+
+
 
 Error* doRaiseHammer() {
     g_ops.raiseHammer = true;                   // We raise the hammer
     magnetOn();                                 // With fist closed
     brakeOff();                                 // With brake off
     statusUpdate(STATUS_RAISE_HAMMER);          // Sing it
-    return motorSetCourseAndSpeed();            // Get to steppin'
+    return moveToTarget();                      // Get to steppin'
 }
 
-void doDropHammer() {
+Error* doDropHammer () {
     g_ops.dropHammer = true;                    // We drop the hammer 
     magnetOff();                                // With fist open
-    brakeOff();                                 // With brake off                 
-    /* TODO: START HAMMERTIME_OUT */ g_ops.awaitDrop = true;
-    statusUpdate(STATUS_DROP_HAMMER);           // Sing it       
+    brakeOff();                                 // With brake off    
+    statusUpdate(STATUS_DROP_HAMMER);           // Sing it 
+    return nullptr;   
 }
 
-/* This funtion is called by calling doGoHome() 
-Returns true until we have secured the hammer */
-sboolErr seekHammer() { 
+//err = &ERR_HAMMERTIME_OUT 
 
-    if( g_state.fistLimit                           /* We found the hammer */
+Error ERR_HAMMERTIME_OUT("the hammer did not strike the anvil");
+Error* doAwaitHammerStrike() {
+
+    Error* err = nullptr;
+
+    /* TODO:   
+    if( HAMMERTIME_OUT
+    )   
+    */ 
+   
+    if( err                                     /* We await too long */
+    ||  g_state.anvilLimit                      /* The hammer did strike */
     ) {
-        if( g_ops.awaitHammer                       /* We were seeking the hammer */
-        )   motorOff();                             // Stop moving while we secure the hammer 
-        
-        magnetOn();                                 // Secure the hammer
-        g_ops.awaitHammer = false;                  // Stop seeking the hammer
-        return {                                    // Take the hammer and leave this place!
-            g_ops.awaitHammer,
-            nullptr
-        };  // Our Quest has ended.
-    }
-    
-    if( !g_ops.awaitHammer                          /* We have yet to seek the hammer */
-    )   statusUpdate(STATUS_SEEK_HAMMER);           // Sing it
-        // Our quest begins!
-
-    g_ops.awaitHammer = true;                       // We seek the hammer
-    magnetOff();                                    // With fist open
-    brakeOn();                                      // With brake on
-    return {                                        // Get to steppin'
-        g_ops.awaitHammer, 
-        motorSetCourseAndSpeed()
-    };  // Our quest continues...
-}
-
-/* This funtion is called by calling doGoHome() 
-Returns true until we have found the anvil */
-sboolErr seekAnvil() {
-
-    if( g_state.anvilLimit                          /* We found the anvil */
-    ) {
-        g_ops.awaitAnvil = false;                   // Stop seeking the anvil
-        return {                                    // Take the anvil and leave this place... no wait that's heavy; I'll go; the anvil is your now... I... don't really know what I'm... I just ummm, don't have anywh- Hey! where are you going? No. Sorry. You've got you own thing. You know what, I'm sure I'll figure it out; don't worry about it...
-            g_ops.awaitAnvil,
-            nullptr
-        };  // Our Quest has ended.
-    }
-
-    if( !g_ops.awaitAnvil                           /* We have yet to seek the anvil */
-    )   statusUpdate(STATUS_SEEK_ANVIL);            // Sing it
-        // Our quest begins!
-
-    g_ops.awaitAnvil = true;                        // We seek the anvil
-    magnetOn();                                     // With fist closed
-    brakeOff();                                     // With brake off
-    return {                                        // Get to steppin'
-        g_ops.awaitAnvil, 
-        motorSetCourseAndSpeed()
-    };  // Our quest continues...
-}
-
-/* Call this funtion to seek home 
-Returns true until we are at home */
-sboolErr doGoHome() {
-    sboolErr bErr;
-
-    bErr = seekHammer();
-    if( bErr.err                                /* We have failed to seek the hammer */
-    ||  bErr.bRes                               /* We continue to seek the hammer */
-    )   return bErr;
-
-    bErr = seekAnvil();
-    if( bErr.err                                /* We have failed to seek the anvil */
-    ||  bErr.bRes                               /* We continue to seek the anvil */
-    )   return bErr;                
-    
-    // With both hammer and anvil, we may return home 
-
-    if( g_state.homeLimit                       /* We found home */
-    ) {
-        motorOff();                             // Stop moving
-        motorSetPositionAsZero();               // Reset our home position
-        g_ops.recovery = false;                 // Clear the recovery flag (in case that's why we sought home)
-        g_ops.goHome = false;                   // Stop going home
-        return {
-            g_ops.goHome,
-            nullptr
-        };// Our Quest has ended.
-    }
-
-    if( !g_ops.goHome                           /* We have yet to seek home */
-    )   statusUpdate(STATUS_SEEK_HOME);         // Sing it
-        // Our quest begins!
-    
-
-    g_ops.goHome = true;                        // We seek home
-    magnetOn();                                 // With fist closed
-    brakeOff();                                 // With brake off 
-    return {                                    // Get to steppin'
-        g_ops.goHome, 
-        motorSetCourseAndSpeed()
-    };  // Our quest continues...
-}
-
-
-bool doSafeStartCheck() { /* TODO: General safety checks */
-
-    if( g_ops.awaitStart 
-    ) {
-        // if( doGoHome()                                      /* We are traveling home */
-        // ) { 
-        //     g_ops.awaitStart = true;
-        //     return g_ops.awaitStart;
-        // }
-
         /* TODO: 
-        Other general safety checks... 
-        */
+            DISABLE HAMMERTIME_OUT */
+    }
 
-        /* We are ready to start */  
-        doRaiseHammer();
-        g_ops.awaitStart = false;
-    }  
-    
-    return g_ops.awaitStart;
+    return err;  
 }
-
 
 Error* runConfiguration() { 
 
-    sboolErr bErr;
+    Error* err;
 
-    if( motorTargetReached()) {
+    if( motorTargetReached()                    /* Our position matched our target  */
+    ) {
+        motorOff();                             // We stop trying to reach our target, lest we look like fools!
 
-        motorOff();                                     // Stop trying to reach the target... You look like a fool!
+        if( g_ops.stepTarget == 0               /* We sit at home having yet to begin... like a dullard! */
+        )   return doRaiseHammer();             // We raise the hammer for the first time
+        // Our quest begins...
 
-        if( g_ops.dropHammer                            /* We've have dropped the hammer */
+        if( g_ops.raiseHammer                   /* We've raised the hammer */
         ) {
-            /* TODO: HAMMERTIME_OUT */ g_ops.awaitDrop = false;
-            
-            if( g_ops.awaitDrop                         /* The hammer has yet to fall */
-            )   return nullptr;                         /* TODO: HAMMERTIME_OUT */
+            g_ops.raiseHammer = false;          // We stop intending to raise the hammer, lest we look like a fool!
+            return doDropHammer();              // We drop the hammer; the time for action has come
+        }
 
-            // The hammer has dropped
-            g_ops.cycleCount++;                         // Count it
+        if( g_ops.dropHammer                    /* We've dropped the hammer */
+        ) {
+            g_ops.dropHammer = false;           // We stop intending to drop the hammer, lest we look like a fool!
+            g_ops.awaitDrop = true;             /* We must await the hammer strike */
+            /* TODO: 
+                ENABLE HAMMERTIME_OUT */
+        }
 
-            bErr = doGoHome();
-            if( bErr.err                                /* We have failed to retrieve the hammer */
-            )   return bErr.err;
-            
-            if( bErr.bRes                               /* We continue to retrieve the hammer */
+        if( g_ops.awaitDrop
+        ) {
+            err = doAwaitHammerStrike();
+            if( err                             /* The hammer has failed to strike */
+            )   return err;
+   
+            if( !g_state.anvilLimit             /* We await the hammer strike */
             )   return nullptr;
+ 
+            g_ops.cycleCount++;                 // The hammer did strike; Count it!
+            g_ops.awaitDrop = false;            // We stop awaiting the hammer strike, lest we look like fools!
+            g_ops.goHome = true;                // We must go home
+        }
 
-            // We have returned home with the hammer
 
-            g_ops.dropHammer = false;                   // Stop intending to drop the hammer
 
+        if( g_ops.goHome
+        ) {
+            err = doGoHome();
+            if( err                             /* We have failed to return home with the hammer */
+            )   return err;
             
+            if( g_ops.seekHome                  /* We continue to return home with the hammer */
+            )   return nullptr;                          
+
+            // We have secured the hammer, found the anvil and arrived at home
+
             if( g_ops.cycleCount == g_config.cycles     /* We have completed out quest */
             ) { 
-                g_config.run = false;                   // Stop questing
+                g_config.run = false;           // Stop questing, lest we look like a fool!
                 g_ops.stepTarget = 0;
                 statusUpdate((char*)"DONE");
                 return nullptr;
+                // Our quest has ended.
             }
 
-            return doRaiseHammer();                     // Continue questing
-        }
-
-        if( g_ops.raiseHammer                           /* We've raised the hammer */
-        ) {
-            g_ops.raiseHammer = false;                  // Stop intending to raise the hammer
-            doDropHammer();                             // Drop the hammer
+            return doRaiseHammer();             // We raise the hammer again
+            // Our quest continues...
         }
 
     }
@@ -393,6 +424,7 @@ int32_t m_i32LastAlarmCheck = 0;
 int32_t m_i32AlarmCheckPeriod_mSec = 5000; 
 Error* runOperations() {
     Error* err;
+
     // If we haven't sent state updated in a while, do it 
     // if(g_ui32InterruptFlag == 0 && m_i32LastAlarmCheck + m_i32AlarmCheckPeriod_mSec < millis()) {
     //     checkAllITRPins();
@@ -406,80 +438,37 @@ Error* runOperations() {
         setMQTTPubFlag(PUB_STATE);
     }
             
-    // if(awaitEStopClear()) // SKIP EVERYTHING ELSE UNTIL SYSTEM IS ENABLED  
-    //     return; 
-    // // SYSTEM IS ENABLED; CONTINUE
+    if( awaitEStopClear()                       /* We yern for the emergency stop button to be released */
+    )   return nullptr;                         // We wait here thererfor...  
     
+    // SYSTEM IS ENABLED; CONTINUE
+    
+    if( awaitDoorClose()                        /* We yern for the door to close */
+    )   return nullptr;                         // We wait here thererfor...  
+    
+    // DOOR IS CLOSED; CONTINUE
 
-    // if(awaitDoorClose()) // SKIP EVERYTHING ELSE UNTIL DOOR IS CLOSED 
-    //     return; 
-    // // DOOR IS CLOSED; CONTINUE
+    if( awaitHelp()                             /* We yern for assistance */
+    )   return nullptr;                         // We wait here thererfor... 
+    
+    // WE FACE OUR FATE ALONE; CONTINUE
 
+    if( awaitConfig()                           /* We yern for a noble quest */
+    )   return nullptr;                         // We wait here thererfor... 
 
-    // if(awaitHelp()) // SKIP EVERYTHING ELSE UNTIL WE GET HELP
-    //     return;
-    // // WE HAVE BEEN HELPED; CONTINUE
-
-
-    if(awaitConfig()) // SKIP EVERYTHING ELSE UNTIL WE ARE CONFIGURED TO RUN 
-        return nullptr;
-    // CONFIGURED TO RUN; CONTINUE 
-
-
-    if(doSafeStartCheck()) // SKIP EVERYTHING ELSE UNTIL IT IS SAFE TO START OPERATIONS  
-        return nullptr;
-    // SAFE TO START OPERATIONS; CONTINUE
-
+    // WE HAVE OUR QUEST; CONTINUE 
 
     err = runConfiguration(); // RUN CONFIGURATION 
     if( err
     )   return err;
 
-    // if (motorTargetReached()) {
-
-    //     motorOff();                                         // Stop trying to reach the target... You look like a fool!
-
-    //     if( g_ops.stepTarget == 0                           // We are starting the fist cycle
-    //     ) { 
-    //         motorSetPositionAsZero();
-    //         g_ops.raiseHammer = true;                       // Start intending to raise the hammer
-    //         g_ops.goHome = false;                           // Stop intending to go home
-    //         statusUpdate((char*)"BEGIN...");
-    //     } 
-
-    //     if( g_ops.stepTarget < 0                            // We have just returned from the drop height
-    //     ) {                    
-    //         g_ops.cycleCount++;                             
-
-    //         if( g_ops.cycleCount == g_config.cycles         // We are done
-    //         ) { 
-    //             g_config.run = false;                       // Stop doing things
-    //             g_ops.stepTarget = 0;
-    //             statusUpdate((char*)"DONE");
-    //             return;
-    //         }
-
-    //         doRaiseHammer();
-    //     }
-
-    //     else { // We're at the top; DROP THE HAMMER!... and then go get it.
-    //         doDropHammer();
-    //     }
-
-    //     delay(100); // Serial.printf("\nm_steps: %d", m_i32StepsTarget);
-    //     motorSetCourseAndSpeed();                   // Get to steppin'
-
-    // } 
-
     // Check if we should send a motor position update
-    if( millis() > m_i32NextPositionUpdate              /* We must publish our position */    
+    if( millis() > m_i32NextPositionUpdate      /* We must publish our position */    
     ) {
-        motorCheckPosition();                           // Check our position
-        setMQTTPubFlag(PUB_OPS_POS);                    // Sing it
-        m_i32NextPositionUpdate =                       // Schedule the next position update
-            millis()              
-            + m_i32PositionUpdatePeriod_mSec;    
-
+        motorGetPosition();                     // Check our position
+        setMQTTPubFlag(PUB_OPS_POS);            // Sing it
+        m_i32NextPositionUpdate =               // Schedule the next position update
+            millis() + m_i32PositionUpdatePeriod_mSec;    
     }
 
     return nullptr;

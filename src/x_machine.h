@@ -8,10 +8,13 @@
 
 /* ALARMS *********************************************************************************************/
 #define STATUS_START "IICHAINZ INITIALIZED"
+
 #define STATUS_ESTOP "EMERGENCEY STOP"
 #define STATUS_DOOR_OPEN "DOOR OPEN"
+
 #define STATUS_REQUEST_HELP "SEEKING OPERATER ASSISTANCE"
 #define STATUS_RECOVERY "LOST POSITION FIX"
+
 #define STATUS_GO_HOME "GO HOME"
 #define STATUS_SEEK_HAMMER "SEEKING HAMMER"
 #define STATUS_SEEK_ANVIL "SEEKING ANVIL"
