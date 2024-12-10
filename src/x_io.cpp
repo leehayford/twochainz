@@ -77,15 +77,21 @@ void setupInterrupts() {
 
 /* DIGITAL OUT **************************************************************************************/
 DOUTPin doutBrake(PIN_OUT_BRAKE, &g_state.breakOn, DOUT_PIN_ACTIVE_LOW);
+/* TODO: ERROR CHECKING */
 void brakeOn() { doutBrake.enable(); }
+/* TODO: ERROR CHECKING */
 void brakeOff() { doutBrake.disable(); }
 
 DOUTPin doutMagnet(PIN_OUT_MAGNET, &g_state.magnetOn, DOUT_PIN_ACTIVE_HIGH);
+/* TODO: ERROR CHECKING */
 void magnetOn() { doutMagnet.enable(); }
+/* TODO: ERROR CHECKING */
 void magnetOff() { doutMagnet.disable(); }
 
 DOUTPin doutMotor(PIN_OUT_MOT_EN, &g_state.motorOn, DOUT_PIN_ACTIVE_LOW);
+/* TODO: ERROR CHECKING */
 void motorOn() { doutMotor.enable(); }
+/* TODO: ERROR CHECKING */
 void motorOff() { doutMotor.disable(); }
 
 
@@ -209,5 +215,7 @@ void setupIO() {
     setupDigitalOutputs();
     
     setupMotor();
+    
+    checkStateIOPins();
 }
 

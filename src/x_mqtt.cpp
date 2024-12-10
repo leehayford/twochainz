@@ -83,14 +83,13 @@ void mqttHandleCMDConfig(char* msg) {
     mqttHandleCMDReport(msg);
 }
 
-
 void mqttHandleCMDOps(char* msg) {
     setMQTTPubFlag(PUB_OPS);
 }
 
 void mqttHandleCMDOpsReset(char* msg) {
-    g_config.cmdReset();
-    g_ops.cmdReset();
+    g_config.cmdReset();                    /* TODO: MOVE THIS */
+    g_ops.cmdReset();                       /* TODO: MOVE THIS */
     mqttHandleCMDReport(msg);
 }
 
