@@ -95,10 +95,8 @@ public:
 
         if( checkTime == 0                      /* The interrupt is quiet */
         ||  checkTime > nowMillis               /* The debouncce period has yet to pass */
-        ) {
-            return;                             // Get outta here
-        }
-
+        )   return;                             // Get outta here
+        
         else {                                  /* Check on this pin */
 
             bPrevState = *pbPinState;           // What state do we think this pin is in now?
@@ -106,10 +104,8 @@ public:
             checkPin();                         // What is the actual pin state?
 
             if( bPrevState != *pbPinState       /* The pin state changed */
-            ) {
-                g_ui32InterruptFlag = 1;        // Ring the bell!
-            }
-
+            )   g_ui32InterruptFlag = 1;        // Ring the bell!
+            
             checkTime = 0;                      // Reset the time / flag
         }
     }

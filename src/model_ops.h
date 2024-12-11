@@ -5,16 +5,29 @@
 #include "dc_esp_server.h" 
 #include "dc_json.h"
 
+#define STATUS_START "awakens"
+
+#define STATUS_ESTOP "yearns for release... of the emergency stop button"
+#define STATUS_DOOR_OPEN "yearns for closure... of the door"
+#define STATUS_REQUEST_HELP "yearns for assistance"
+#define STATUS_WANT_CONFIG "yearns for purpose"
+
+#define STATUS_SEEK_HAMMER "seeks the hammer"
+#define STATUS_SEEK_ANVIL "seeks the anvil"
+#define STATUS_SEEK_HOME "seeks home"
+#define STATUS_RAISE_HAMMER "raises the hammer"
+#define STATUS_DROP_HAMMER "drops the hammer"
+
 class Ops {
 private:
 
-    const char* awaitEStopKey = "\"await_estop\":";
-    const char* awaitDoorKey = "\"await_door\":";
-    const char* awaitConfigKey = "\"await_config\":";
+    const char* wantEStopReleaseKey = "\"want_estop_release\":";
+    const char* wantDoorCloseKey = "\"want_door_close\":";
+    const char* wantConfigKey = "\"want_config\":";
 
-    const char* seekHelpKey = "\"seek_help\":";
-    const char* awaitHelpKey = "\"await_help\":";
-    const char* recoveryKey = "\"recovery\":";
+    const char* requestAidKey = "\"request_aid\":";
+    const char* wantAidKey = "\"want_aid\":";
+    const char* reorientKey = "\"reorient\":";
 
     const char* goHomeKey = "\"go_home\":";
     const char* seekHammerKey = "\"seek_hammer\":";
@@ -23,7 +36,7 @@ private:
 
     const char* raiseHammerKey = "\"raise_hammer\":";
     const char* dropHammerKey = "\"drop_hammer\":";
-    const char* awaitStrikeKey = "\"await_strike\":";
+    const char* wantStrikeKey = "\"want_strike\":";
 
     const char* cycleCountKey = "\"cycle_count\":";
     const char* stepTargetKey = "\"step_target\":";
@@ -35,13 +48,13 @@ private:
 
 public:
 
-    bool awaitEStop;
-    bool awaitDoor;
-    bool awaitConfig;
+    bool wantEStopRelease;
+    bool wantDoorClose;
+    bool wantConfig;
 
-    bool seekHelp;
-    bool awaitHelp;
-    bool recovery;
+    bool requestAid;
+    bool wantAid;
+    bool reorient;
 
     bool goHome;
     bool seekHammer;
@@ -50,7 +63,7 @@ public:
 
     bool raiseHammer;
     bool dropHammer;
-    bool awaitStrike;
+    bool wantStrike;
 
     int cycleCount;
     int stepTarget;
@@ -59,13 +72,13 @@ public:
     char status[JSON_FIELD_STRING_LENGTH];
 
     Ops(
-        bool aw_es = false,
-        bool aw_dr = false,
-        bool aw_cfg = false,
+        bool wnt_es = false,
+        bool wnt_dr = false,
+        bool wnt_cfg = false,
 
-        bool sk_hlp = false,
-        bool aw_hlp = false,
-        bool rec = false,
+        bool req_aid = false,
+        bool wnt_aid = false,
+        bool reo = false,
 
         bool go_home = false,
         bool sk_hmr = false,
@@ -74,21 +87,21 @@ public:
         
         bool ras_hmr = false,
         bool drp_hmr = false,
-        bool aw_strk = false,
+        bool wnt_strk = false,
 
-        int cycles = 0,
-        int target = 0,
-        int hz = 0,
+        int cyc_cnt = 0,
+        int stp_trg = 0,
+        int stp_hz = 0,
 
         const char stat[JSON_FIELD_STRING_LENGTH]="initialized"
     ) {
-        awaitEStop = aw_es;
-        awaitDoor = aw_dr;
-        awaitConfig = aw_cfg;
+        wantEStopRelease = wnt_es;
+        wantDoorClose = wnt_dr;
+        wantConfig = wnt_cfg;
 
-        seekHelp = sk_hlp;
-        awaitHelp = aw_hlp;
-        recovery = rec;
+        requestAid = req_aid;
+        wantAid = wnt_aid;
+        reorient = reo;
 
         goHome = go_home;
         seekHammer = sk_hmr;
@@ -97,25 +110,27 @@ public:
 
         raiseHammer = ras_hmr;
         dropHammer = drp_hmr;
-        awaitStrike = aw_strk;
+        wantStrike = wnt_strk;
 
-        cycleCount = cycles;
-        stepTarget = target;
-        stepHz = hz;
+        cycleCount = cyc_cnt;
+        stepTarget = stp_trg;
+        stepHz = stp_hz;
 
         strcpy(status, stat);
     }
  
     void setStatus(const char stat[JSON_FIELD_STRING_LENGTH]) {
         strcpy(status, stat);
+        Serial.printf("\ng_ops.setStatus( %s )\n", status);
     }
 
-    void beginRecovery() {
-        awaitHelp = false;                      // We stop awaiting help, lest we look like fools!
-        seekHelp = false;                       // We stop requesting help, lest we look like fools!
+    void doReorientation() {
+        wantAid = false;                        // We stop yearning for aid, lest we look like fools!
+        requestAid = false;                     // We stop requesting aid, lest we look like fools!
+        
         // These flags are cleared in the doGoHome function
-        recovery = true;                        // We must be cautious 
-        goHome = true;                          // We must go home 
+        reorient = true;                        // We embark on a journey of self discovery
+        goHome = true;                          // Spoiler alert: such journies nearly always lead us home
     }
 
     void clearProgress() {
@@ -124,22 +139,22 @@ public:
 
     void cmdReset() {
         clearProgress();
-        beginRecovery();
+        doReorientation();
     }
 
     void cmdContinue() {
-        beginRecovery();
+        doReorientation();
     }
 
     /* TODO: MAKE READ ONLY AFTER DEBUG */
     void parseFromJSON(const char* jsonString) {
-        jsonParseBool(jsonString, awaitEStopKey, awaitEStop);
-        jsonParseBool(jsonString, awaitDoorKey, awaitDoor);
-        jsonParseBool(jsonString, awaitConfigKey, awaitConfig);
+        jsonParseBool(jsonString, wantEStopReleaseKey, wantEStopRelease);
+        jsonParseBool(jsonString, wantDoorCloseKey, wantDoorClose);
+        jsonParseBool(jsonString, wantConfigKey, wantConfig);
 
-        jsonParseBool(jsonString, seekHelpKey, seekHelp);
-        jsonParseBool(jsonString, awaitHelpKey, awaitHelp);
-        jsonParseBool(jsonString, recoveryKey, recovery);
+        jsonParseBool(jsonString, requestAidKey, requestAid);
+        jsonParseBool(jsonString, wantAidKey, wantAid);
+        jsonParseBool(jsonString, reorientKey, reorient);
 
         jsonParseBool(jsonString, goHomeKey, goHome);
         jsonParseBool(jsonString, seekHammerKey, seekHammer);
@@ -148,7 +163,7 @@ public:
 
         jsonParseBool(jsonString, raiseHammerKey, raiseHammer);
         jsonParseBool(jsonString, dropHammerKey, dropHammer);
-        jsonParseBool(jsonString, awaitStrikeKey, awaitStrike);
+        jsonParseBool(jsonString, wantStrikeKey, wantStrike);
 
         jsonParseInt(jsonString, cycleCountKey, cycleCount);
         jsonParseInt(jsonString, stepTargetKey, stepTarget);
@@ -160,13 +175,13 @@ public:
     char* serializeToJSON() {
         jsonSerializeStart(jsonOut);
 
-        jsonSerializeBool(jsonOut, awaitEStopKey, awaitEStop);
-        jsonSerializeBool(jsonOut, awaitDoorKey, awaitDoor);
-        jsonSerializeBool(jsonOut, awaitConfigKey, awaitConfig);
+        jsonSerializeBool(jsonOut, wantEStopReleaseKey, wantEStopRelease);
+        jsonSerializeBool(jsonOut, wantDoorCloseKey, wantDoorClose);
+        jsonSerializeBool(jsonOut, wantConfigKey, wantConfig);
 
-        jsonSerializeBool(jsonOut, seekHelpKey, seekHelp);
-        jsonSerializeBool(jsonOut, awaitHelpKey, awaitHelp);
-        jsonSerializeBool(jsonOut, recoveryKey, recovery);
+        jsonSerializeBool(jsonOut, requestAidKey, requestAid);
+        jsonSerializeBool(jsonOut, wantAidKey, wantAid);
+        jsonSerializeBool(jsonOut, reorientKey, reorient);
         
         jsonSerializeBool(jsonOut, goHomeKey, goHome);
         jsonSerializeBool(jsonOut, seekHammerKey, seekHammer);
@@ -175,7 +190,7 @@ public:
 
         jsonSerializeBool(jsonOut, raiseHammerKey, raiseHammer); 
         jsonSerializeBool(jsonOut, dropHammerKey, dropHammer);
-        jsonSerializeBool(jsonOut, awaitStrikeKey, awaitStrike);
+        jsonSerializeBool(jsonOut, wantStrikeKey, wantStrike);
 
         jsonSerializeInt(jsonOut, cycleCountKey, cycleCount);
         jsonSerializeInt(jsonOut, stepTargetKey, stepTarget);
@@ -194,13 +209,13 @@ public:
     void debugPrintValues() {
         Serial.printf("Ops.debugPrintValues() :\n");
 
-        Serial.printf("Await EStop Clear: %s\n", btoa(awaitEStop));
-        Serial.printf("Await Door Close: %s\n", btoa(awaitDoor));
-        Serial.printf("Await Configuration: %s\n", btoa(awaitConfig));
+        Serial.printf("Want EStop Release: %s\n", btoa(wantEStopRelease));
+        Serial.printf("Want Door Close: %s\n", btoa(wantDoorClose));
+        Serial.printf("Want Configuration: %s\n", btoa(wantConfig));
 
-        Serial.printf("Request Help: %s\n", btoa(seekHelp));
-        Serial.printf("Await Help: %s\n", btoa(awaitHelp));
-        Serial.printf("Recovery Mode: %s\n", btoa(recovery));
+        Serial.printf("Request Aid: %s\n", btoa(requestAid));
+        Serial.printf("Want Aid: %s\n", btoa(wantAid));
+        Serial.printf("Reorient: %s\n", btoa(reorient));
 
         Serial.printf("Go Home: %s\n", btoa(goHome));
         Serial.printf("Seek Hammer: %s\n", btoa(seekHammer));
@@ -209,7 +224,7 @@ public:
         
         Serial.printf("Raise Hammer: %s\n", btoa(raiseHammer));
         Serial.printf("Drop Hammer: %s\n", btoa(dropHammer));
-        Serial.printf("Await Strike: %s\n", btoa(awaitStrike));
+        Serial.printf("Want Hammer Strike: %s\n", btoa(wantStrike));
 
         Serial.printf("Cycle Count: %d\n", cycleCount);
         Serial.printf("Step Target: %d\n", stepTarget);

@@ -62,7 +62,7 @@ void mqttHandleCMDOps(char* msg);
 Clears Config
 Clears Ops progress
 Sets Ops return to home flags
-Clears Ops.awaitHelp flag
+Clears Ops.wantAid flag
 Sets MQTT publish flags: 
 - Config 
 - State
@@ -70,7 +70,7 @@ Sets MQTT publish flags:
 void mqttHandleCMDOpsReset(char* msg);
 
 /* Message IGNORED 
-Clears Ops.awaitHelp flag
+Clears Ops.wantAid flag
 Previous operation resumes 
 Sets MQTT publish flags: 
 - Config 

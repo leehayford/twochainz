@@ -5,12 +5,12 @@
 // char* SIG = mqttTopic(MQTT_TOPIC_PREFIX, "sig/");
 
 mqttPublication m_mqttPubs[N_PUBS] = {
-    {(char*)"esp32/sig/error", 0, (mqttPubFunc)&mqttPublishError},
-    {(char*)"esp32/sig/state", 0, (mqttPubFunc)&mqttPublishState},
-    {(char*)"esp32/sig/config", 0, (mqttPubFunc)&mqttPublishConfig},
+    {"esp32/sig/error", 0, (mqttPubFunc)&mqttPublishError},
+    {"esp32/sig/state", 0, (mqttPubFunc)&mqttPublishState},
+    {"esp32/sig/config", 0, (mqttPubFunc)&mqttPublishConfig},
 
-    {(char*)"esp32/sig/ops", 0, (mqttPubFunc)&mqttPublishOps},
-    {(char*)"esp32/sig/ops/pos", 0, (mqttPubFunc)&mqttPublishOpsPosition},
+    {"esp32/sig/ops", 0, (mqttPubFunc)&mqttPublishOps},
+    {"esp32/sig/ops/pos", 0, (mqttPubFunc)&mqttPublishOpsPosition},
 };
 
 void mqttPublishError(Error* err) { /* TODO: CREATE ERROR CLASS & INSTANCES */
@@ -46,25 +46,25 @@ void setMQTTPubFlag(eMqttPubMap_t pub) {
 // char* CMD = mqttTopic(MQTT_TOPIC_PREFIX, "cmd/");
 
 
-void mqttHandleCMDTestMotOn(char* msg) {
+void mqttHandleCMDTestMotOn(char* msg) { /* TODO: Remove for production */
     motorOn();
 }
 
-void mqttHandleCMDTestMotOff(char* msg) {
+void mqttHandleCMDTestMotOff(char* msg) { /* TODO: Remove for production */
     motorOff();
 }
 
 mqttSubscription m_mqttSubs[N_SUBS] = {
-    {(char*)"esp32/cmd/report", (mqttCMDFunc)&mqttHandleCMDReport},
-    {(char*)"esp32/cmd/state", (mqttCMDFunc)&mqttHandleCMDState},
-    {(char*)"esp32/cmd/config", (mqttCMDFunc)&mqttHandleCMDConfig},
+    {"esp32/cmd/report", (mqttCMDFunc)&mqttHandleCMDReport},
+    {"esp32/cmd/state", (mqttCMDFunc)&mqttHandleCMDState},
+    {"esp32/cmd/config", (mqttCMDFunc)&mqttHandleCMDConfig},
 
-    {(char*)"esp32/cmd/ops", (mqttCMDFunc)&mqttHandleCMDOps},
-    {(char*)"esp32/cmd/ops/reset", (mqttCMDFunc)&mqttHandleCMDOpsReset},
-    {(char*)"esp32/cmd/ops/continue", (mqttCMDFunc)&mqttHandleCMDOpsContinue},
+    {"esp32/cmd/ops", (mqttCMDFunc)&mqttHandleCMDOps},
+    {"esp32/cmd/ops/reset", (mqttCMDFunc)&mqttHandleCMDOpsReset},
+    {"esp32/cmd/ops/continue", (mqttCMDFunc)&mqttHandleCMDOpsContinue},
 
-    {(char*)"esp32/cmd/test/mot_on", (mqttCMDFunc)&mqttHandleCMDTestMotOn},
-    {(char*)"esp32/cmd/test/mot_off", (mqttCMDFunc)&mqttHandleCMDTestMotOff},
+    {"esp32/cmd/test/mot_on", (mqttCMDFunc)&mqttHandleCMDTestMotOn},
+    {"esp32/cmd/test/mot_off", (mqttCMDFunc)&mqttHandleCMDTestMotOff},
 };
 
 
@@ -79,7 +79,9 @@ void mqttHandleCMDState(char* msg) {
 }
 
 void mqttHandleCMDConfig(char* msg) {
-    g_config.parseFromJSON(msg);
+    g_config.parseFromJSON(msg); 
+    g_ops.clearProgress();
+    g_ops.goHome = true;   
     mqttHandleCMDReport(msg);
 }
 
@@ -88,8 +90,8 @@ void mqttHandleCMDOps(char* msg) {
 }
 
 void mqttHandleCMDOpsReset(char* msg) {
-    g_config.cmdReset();                    /* TODO: MOVE THIS */
-    g_ops.cmdReset();                       /* TODO: MOVE THIS */
+    g_config.cmdReset();                    
+    g_ops.cmdReset();                       
     mqttHandleCMDReport(msg);
 }
 
@@ -97,6 +99,10 @@ void mqttHandleCMDOpsContinue(char* msg) {
     g_ops.cmdContinue();
     mqttHandleCMDReport(msg);
 }
+
+
+
+
 
 /* MQTT General Setup *************************************************************************************/
 void mqttCallBack_X(char* topic, byte* message, unsigned int length) {

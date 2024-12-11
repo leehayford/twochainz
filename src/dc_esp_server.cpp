@@ -138,7 +138,7 @@ void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* sub
     }
 }
 
-void publishMQTTMessage(char* topic, char* msg) {
+void publishMQTTMessage(const char* topic, char* msg) {
     uint32_t length = strlen(msg);
     byte* p = (byte*)malloc(length);
     memcpy(p, msg, length);

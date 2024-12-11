@@ -31,10 +31,10 @@ extern void sendWSString(String str);
 #define MQTT_PUB_BUFFER_SIZE 1024
 
 typedef void (*mqttCMDFunc) (char* msg);
-typedef struct {char* topic; mqttCMDFunc func;} mqttSubscription;
+typedef struct {const char* topic; mqttCMDFunc func;} mqttSubscription;
 
 typedef void (*mqttPubFunc) ();
-typedef struct {char* topic; int flag; mqttPubFunc func;} mqttPublication;
+typedef struct {const char* topic; int flag; mqttPubFunc func;} mqttPublication;
 
 extern char* mqttTopic(const char* prfx, const char* topic);
 
@@ -43,6 +43,6 @@ extern void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCa
 
 extern void serviceMQTTClient(const char* user, const char* pw, mqttSubscription* subs, int length);
 extern void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* subs, int length);
-extern void publishMQTTMessage(char* topic, char* msg);
+extern void publishMQTTMessage(const char* topic, char* msg);
 
 #endif /* DC_ESP_SERVER_H */

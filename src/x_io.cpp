@@ -77,25 +77,19 @@ void setupInterrupts() {
 
 /* DIGITAL OUT **************************************************************************************/
 DOUTPin doutBrake(PIN_OUT_BRAKE, &g_state.breakOn, DOUT_PIN_ACTIVE_LOW);
-/* TODO: ERROR CHECKING */
-void brakeOn() { doutBrake.enable(); }
-/* TODO: ERROR CHECKING */
-void brakeOff() { doutBrake.disable(); }
+void brakeOn() { doutBrake.enable(); } /* TODO: ERROR CHECKING */
+void brakeOff() { doutBrake.disable(); } /* TODO: ERROR CHECKING */
 
 DOUTPin doutMagnet(PIN_OUT_MAGNET, &g_state.magnetOn, DOUT_PIN_ACTIVE_HIGH);
-/* TODO: ERROR CHECKING */
-void magnetOn() { doutMagnet.enable(); }
-/* TODO: ERROR CHECKING */
-void magnetOff() { doutMagnet.disable(); }
+void magnetOn() { doutMagnet.enable(); } /* TODO: ERROR CHECKING */
+void magnetOff() { doutMagnet.disable(); } /* TODO: ERROR CHECKING */
 
 DOUTPin doutMotor(PIN_OUT_MOT_EN, &g_state.motorOn, DOUT_PIN_ACTIVE_LOW);
-/* TODO: ERROR CHECKING */
-void motorOn() { doutMotor.enable(); }
-/* TODO: ERROR CHECKING */
-void motorOff() { doutMotor.disable(); }
-
+void motorOn() { doutMotor.enable(); } /* TODO: ERROR CHECKING */
+void motorOff() { doutMotor.disable(); } /* TODO: ERROR CHECKING */
 
 DOUTPin doutMotDir(PIN_OUT_MOT_DIR, nullptr, NULL, DOUT_SANS_STATE);
+
 DOUTPin doutMotStep(PIN_OUT_MOT_STEP, nullptr, NULL, DOUT_SANS_STATE);
 
 
@@ -132,13 +126,9 @@ Error* motorGetPosition() {
     return nullptr;
 }
 
-Error ERR_MOT_SET_ZERO_FAILED("motor could no be set to zero");
 Error* motorSetPositionAsZero() {
     m_motor.setCurrentPositionInSteps(0);
-    if( motorGetPosition()
-    )   return &ERR_MOT_SET_ZERO_FAILED;
-
-    return nullptr;
+    return motorGetPosition();
 }
 
 Error ERR_MOT_SPEED_TOO_HIGH("motor target speed is too high", WARNING);
