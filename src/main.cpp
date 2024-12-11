@@ -25,16 +25,15 @@ void setup() {
     setupIO();
 
     setupOps();
-    
+
 }
 
-Error* opsErr;
 void loop() {
 
     serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
     
-    opsErr = runOperations();
-    if( opsErr
-    )   mqttPublishError(opsErr);
+    Error* err = runOperations();
+    if( err
+    )   mqttPublishError(err);
 
 }

@@ -24,7 +24,13 @@ void setUpHammerStrikeTimer() {
 }
 
 hw_timer_t *tmrOpsITR = NULL;
-void IRAM_ATTR isrOpsITRTimer() {}
+void IRAM_ATTR isrOpsITRTimer() {
+    if( g_ui32InterruptFlag                     /* We have had a state change */
+    ) {
+        setMQTTPubFlag(PUB_STATE);              // We tell all of our state change
+        g_ui32InterruptFlag = 0;                // We stop reacting to the state change, lest we look like fools!
+    }
+}
 void setUpOpsITRTimer() {
 
     tmrOpsITR = timerBegin(
@@ -129,23 +135,25 @@ When EStop is released
 - Set g_ops.awaitHelp 
 
 Returns true until EStop button is released */
-bool awaitEStopClear() {
+bool isEStopPressed() {
     
     if( g_state.eStop                           /* The emergency stop button is pressed */
-    &&  !g_ops.awaitEStop                       /* We did't know the button was pressed */
-    ) { 
+    ) {
         motorOff();                             // Stop moving
         brakeOn();                              // Apply the brake
         magnetOff();                            // Turn off the magnet
-        statusUpdate(STATUS_ESTOP);             // Sing it
-        g_ops.awaitEStop = true;                // We begin to yern for an enabled system
+
+        if( !g_ops.awaitEStop                   /* We did't know the button was pressed */
+        )   statusUpdate(STATUS_ESTOP);         // Sing it
+
+        g_ops.awaitEStop = true;                // We yern for an enabled system
     }
        
-    else                                        /* The system is enabled */      
-    if( g_ops.awaitEStop                        /* We yern for an enabled system */
+    else                                        /* The system is enabled */   
+    if( g_ops.awaitEStop                        /* Still we yern for an enabled system */
     ) {
         g_ops.awaitEStop = false;               // We stop yerning for an enabled system, lest we look like fools!
-        g_ops.awaitHelp = true;                 // We need an operator to tell us it's ok to continue 
+        g_ops.awaitHelp = true;                 // We begin yerning for an operator to tell us it's ok to continue 
     }
 
     return g_ops.awaitEStop; 
@@ -161,23 +169,25 @@ When the door is closed
 - Set g_ops.awaitHelp 
 
 Returns true unti door is closed */
-bool awaitDoorClose() {
+bool isDoorOpen() {
     
     if( g_state.doorOpen                        /* The door is open */
-    &&  !g_ops.awaitDoor                        /* We did't know the door was open */
-    ) { 
+    ) {
         motorOff();                             // Stop moving
         brakeOn();                              // Apply the brake
         magnetOff();                            // Turn off the magnet
-        statusUpdate(STATUS_DOOR_OPEN);         // Sing it
-        g_ops.awaitDoor = true;                 // We begin to yern for a closed door
+
+        if( !g_ops.awaitDoor                    /* We did't know the door was open */
+        )   statusUpdate(STATUS_DOOR_OPEN);     // Sing it
+
+        g_ops.awaitDoor = true;                 // We yern for a closed door
     } 
     
-    else                                        /* The door is closed */              
-    if( g_ops.awaitDoor                         /* We yern for a closed door */
+    else                                        /* The door is closed */  
+    if( g_ops.awaitDoor                         /* Still we yern for a closed door */
     ) {
         g_ops.awaitDoor = false;                // We stop yerning for a closed door, lest we look like fools!
-        g_ops.awaitHelp = true;                 // We need an operator to tell us it's ok to continue          
+        g_ops.awaitHelp = true;                 // We begin yerning for an operator to tell us it's ok to continue         
     }
 
     return g_ops.awaitDoor;
@@ -188,12 +198,12 @@ Returns true until an operator hits reset or cancel:
 MQTT message received at:
 - .../cmd/ops/reset 
 - .../cmd/ops/continue */
-bool awaitHelp() {
+bool isHelpRequired() {
 
-    if( g_ops.awaitHelp                         /* Something bad happened and we need help */
-    &&  !g_ops.seekHelp                         /* We have yet to ask for help */
+    if( g_ops.awaitHelp                         /* Something bad happened and we yern for help */
+    &&  !g_ops.seekHelp                         /* We have yet to seek help */
     ) {
-        g_ops.seekHelp = true;                  // Ask for help
+        g_ops.seekHelp = true;                  // We seek help
         statusUpdate(STATUS_REQUEST_HELP);      // Sing it
     }
 
@@ -202,23 +212,22 @@ bool awaitHelp() {
 
 /* Called with every execution of runOperations() 
 Returns true until a valid configuration is receved */
-bool awaitConfig() {
+bool isConfigInvalid() {
 
-    if( g_config.validate()                     /* We have a valid configuration */
+    if( !g_config.validate()                    /* Our configuration is invalid */
     ) {
-        if( g_ops.awaitConfig                   /* We were waiting for a valid configuration */
-        ) {
-            g_ops.clearProgress();              // Prepare to start a new campaign 
-            g_ops.awaitConfig = false;          // We stop awaiting configuration, lest we look like fools!
-        }
+        if( !g_ops.awaitConfig                  /* We didn't know our configuration is invalid */
+        )   statusUpdate(STATUS_AWAIT_CONFIG);  // Sing it
+
+        g_ops.awaitConfig = true;               // We yern for a valid configuration
     }
 
-    else                                        /* We must wait for a valid configuration */
-    if( !g_ops.awaitConfig                      /* We have yet to start waiting */
-    ){
-        g_ops.awaitConfig = true;               // Start waiting
-        statusUpdate(STATUS_AWAIT_CONFIG);      // Sing it
-    } 
+    else                                        /* Our configuration is valid */
+    if( g_ops.awaitConfig                       /* Still we yern for a valid configuration */
+    ) {
+        g_ops.awaitConfig = false;              // We stop yerning for a valid configuration, lest we look like fools!
+        g_ops.clearProgress();                  // We prepare to start a new campaign 
+    }
 
     return g_ops.awaitConfig;
 }
@@ -229,10 +238,8 @@ Returns an error if we fail to secure the hammer */
 Error* doSeekHammer() { 
 
     if( g_state.fistLimit                       /* We found the hammer */
-    ) {
-        if( g_ops.seekHammer                    /* We were seeking the hammer */
-        )   motorOff();                         // Stop moving while we secure the hammer 
-        
+    ) { 
+        motorOff();                             // Stop moving while we secure the hammer 
         magnetOn();                             // Secure the hammer
         g_ops.seekHammer = false;               // Stop seeking the hammer, lest you look like a fool!
         return nullptr;                         // Take the hammer and leave this place! 
@@ -246,7 +253,7 @@ Error* doSeekHammer() {
     g_ops.seekHammer = true;                    // We seek the hammer
     magnetOff();                                // With fist open
     brakeOn();                                  // With brake on
-    return moveToTarget();                       // Get to steppin'
+    return moveToTarget();                      // Get to steppin'
     // Our search continues...
 }
 
@@ -258,7 +265,7 @@ Error* doSeekAnvil() {
     if( g_state.anvilLimit                      /* We found the anvil */
     ) {
         g_ops.seekAnvil = false;                // Stop seeking the anvil, lest you look like a fool!
-        return nullptr;                         // Take the anvil and leave this place... no wait that's heavy; I'll go; the anvil is your now... I... don't really know what I'm... I just ummm, don't have anywh- Hey! where are you going? No. Sorry. You've got you own thing. You know what, I'm sure I'll figure it out; don't worry about it...
+        return nullptr;                         // Take the anvil and leave this place... no wait that's heavy; I'll go; the anvil is yours now... I... don't really know what I'm... I just ummm, don't have anywh- Hey! where are you going? No. Sorry. You've got you own thing. You know what, I'm sure I'll figure it out; don't worry about it...
         // Our search has ended.
     }
 
@@ -269,7 +276,7 @@ Error* doSeekAnvil() {
     g_ops.seekAnvil = true;                     // We seek the anvil
     magnetOn();                                 // With fist closed
     brakeOff();                                 // With brake off
-    return moveToTarget();                       // Get to steppin'
+    return moveToTarget();                      // Get to steppin'
     // Our search continues...
 }
 
@@ -292,7 +299,7 @@ Error* doSeekHome() {
     g_ops.seekHome = true;                      // We seek home
     magnetOn();                                 // With fist closed
     brakeOff();                                 // With brake off
-    return moveToTarget();                       // Get to steppin'
+    return moveToTarget();                      // Get to steppin'
     // Our search continues...
 }
 
@@ -450,30 +457,17 @@ Sends g_state.currentHeight periodically while fist is in motion
 Sends g_state if opsIOFlag is set */
 Error* runOperations() {
 
-    /* TODO: 
+    if( isEStopPressed()                        /* We yern for the system to be enabled */
+    )   return nullptr;                         // We go no further...  
     
-    Either:
-        while( g_ui32InterruptFlag == 0 ) {
-            ... run ops ...
-        }
-        handle interrupt related shite
-        clear interrupt flag 
+    if( isDoorOpen()                            /* We yern for the door to close */
+    )   return nullptr;                         // We go no further... 
 
-    Or:
-        Use *tmrOpsITR --> isrOpsITRTimer()
-    */
+    if( isHelpRequired()                        /* We yern for assistance */
+    )   return nullptr;                         // We go no further... 
 
-    if( awaitEStopClear()                       /* We yern for the system to be enabled */
-    )   return nullptr;                         // We wait here thererfor...  
-    
-    if( awaitDoorClose()                        /* We yern for the door to close */
-    )   return nullptr;                         // We wait here thererfor...  
-
-    if( awaitHelp()                             /* We yern for assistance */
-    )   return nullptr;                         // We wait here thererfor... 
-
-    if( awaitConfig()                           /* We yern for a noble quest */
-    )   return nullptr;                         // We wait here thererfor... 
+    if( isConfigInvalid()                       /* We yern for a noble quest */
+    )   return nullptr;                         // We go no further...  
 
     // We have work to do and the freedome to do it
 

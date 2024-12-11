@@ -38,7 +38,8 @@ public:
             run                                 /* We have been told to run */
         &&  cycles > 0                          /* We have a valid cycle setting */
         &&  height > 0
-        &&  height < FIST_HEIGHT_MAX_INCH       /* We have a valid height setting */
+        &&  height > 0                          /* We have a valid height setting */
+        &&  height < FIST_HEIGHT_MAX_INCH       
         );
     }
 
