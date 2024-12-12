@@ -60,7 +60,6 @@ void setupOps() {
 
     setUpHammerStrikeTimer();
 
-    statusUpdate(STATUS_START);
 }
 
 void statusUpdate(const char* status_msg) {
@@ -488,8 +487,11 @@ Error* runOperations() {
 
     // We have work to do and the freedome to do it
 
-    if( g_state.motorOn                         /* We are moving */
+    if( g_ops.goHome                            /* We are moving */
+    ||  g_ops.raiseHammer                       /* We are moving */
     )   doPositionUpdate();                     // All await word of our travels
+    else
+        motorOff();                             // Stop going
 
     if( g_ops.goHome                            /* We've been called home */
     )   return doGoHome();                      // All await our return
@@ -500,8 +502,8 @@ Error* runOperations() {
     if( g_ops.dropHammer                        /* We must drop the hammer */
     )   return doDropHammer();                  // We await the hammer strike 
     
-    // if( motorTargetReached()                    /* Our position matched our target  */
-    // )   motorOff();                             // We stop trying to reach our target, lest we look like fools!
+    // if( motorTargetReached()                 /* Our position matched our target  */
+    // )   motorOff();                          // We stop trying to reach our target, lest we look like fools!
     
     return nullptr;
 
