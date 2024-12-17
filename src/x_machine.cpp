@@ -1,28 +1,6 @@
 #include "x_machine.h"
 
-Error ERR_HAMMERTIME_OUT("the hammer did not strike the anvil");
-bool m_bHammertimeOut = false; 
-hw_timer_t *tmrHammeStrike = NULL;
-void setUpHammerStrikeTimer() {
-    tmrHammeStrike = timerBegin(
-        HAMMER_STRIKE_TIMER,
-        HAMMER_STRIKE_TIMER_PRESCALE,
-        HAMMER_STRIKE_TIMER_COUNT_UP
-    );
-
-    timerAttachInterrupt(
-        tmrHammeStrike,
-        [](){ m_bHammertimeOut = true; },
-        HAMMER_STRIKE_TIMER_EDGE
-    );
-
-    timerAlarmWrite(
-        tmrHammeStrike,
-        HAMMER_STRIKE_TIMER_PERIOD_uSEC,
-        HAMMER_STRIKE_TIMER_RUN_ONCE
-    );
-}
-
+/* Interrupt Time stuff */
 hw_timer_t *tmrOpsITR = NULL;
 void IRAM_ATTR isrOpsITRTimer() {
     if( g_ui32InterruptFlag                     /* We have had a state change */
@@ -54,11 +32,121 @@ void setUpOpsITRTimer() {
     timerAlarmEnable(tmrOpsITR);
 }
 
+
+/* Brake Timer stuff */
+hw_timer_t *tmrOpsBrake = NULL;
+
+Error ERR_BRAKE_ON_PRESSURE_HIGH("failed to engage brake; high pressure fault");
+bool m_bBrakeOnTimeout = false;
+void startBrakeOnTimeout() {
+    tmrOpsBrake = timerBegin(
+        OPS_BRAKE_TIMER,
+        OPS_BRAKE_TIMER_PRESCALE,
+        OPS_BRAKE_TIMER_COUNT_UP
+    );
+
+    timerAttachInterrupt(
+        tmrOpsBrake,
+        [](){ m_bBrakeOnTimeout = true; },
+        OPS_BRAKE_TIMER_EDGE
+    );
+
+    timerAlarmWrite(
+        tmrOpsBrake,
+        OPS_BRAKE_TIMER_ON_PERIOD_uSEC,
+        OPS_BRAKE_TIMER_RUN_ONCE
+    );
+
+    m_bBrakeOnTimeout = false;
+    timerAlarmEnable(tmrOpsBrake);
+}
+
+Error ERR_BRAKE_OFF_PRESSURE_LOW("failed to release brake; low pressure fault");
+bool m_bBrakeOffTimeout = false;
+void startBrakeOffTimeout() {
+    tmrOpsBrake = timerBegin(
+        OPS_BRAKE_TIMER,
+        OPS_BRAKE_TIMER_PRESCALE,
+        OPS_BRAKE_TIMER_COUNT_UP
+    );
+
+    timerAttachInterrupt(
+        tmrOpsBrake,
+        [](){ m_bBrakeOffTimeout = true; },
+        OPS_BRAKE_TIMER_EDGE
+    );
+
+    timerAlarmWrite(
+        tmrOpsBrake,
+        OPS_BRAKE_TIMER_OFF_PERIOD_uSEC,
+        OPS_BRAKE_TIMER_RUN_ONCE
+    );
+
+    m_bBrakeOffTimeout = false;
+    timerAlarmEnable(tmrOpsBrake);
+
+}
+
+/* Hammertime stuff */
+hw_timer_t *tmrOpsHammer = NULL;
+
+Error ERR_HAMMERTIME_OUT("the hammer did not strike the anvil");
+// bool m_bHammertimeOutStrike = false; 
+// void startHammertimeOut() {
+//     tmrOpsHammer = timerBegin(
+//         OPS_HAMMER_TIMER,
+//         OPS_HAMMER_TIMER_PRESCALE,
+//         OPS_HAMMER_TIMER_COUNT_UP
+//     );
+
+//     timerAttachInterrupt(
+//         tmrOpsHammer,
+//         [](){ m_bHammertimeOutStrike = true; },
+//         OPS_HAMMER_TIMER_EDGE
+//     );
+
+//     timerAlarmWrite(
+//         tmrOpsHammer,
+//         OPS_HAMMER_TIMER_STRIKE_PERIOD_uSEC,
+//         OPS_HAMMER_TIMER_RUN_ONCE
+//     );
+    
+//     m_bHammertimeOutStrike = false;               // Clear the flag
+//     timerAlarmEnable(tmrOpsHammer);        // Hammertime is upon us
+// }
+
+bool m_bHammetimeOutCatch = false;
+void startHammerCatchTimer() {
+    tmrOpsHammer = timerBegin(
+        OPS_HAMMER_TIMER,
+        OPS_HAMMER_TIMER_PRESCALE,
+        OPS_HAMMER_TIMER_COUNT_UP
+    );
+
+    timerAttachInterrupt(
+        tmrOpsHammer,
+        [](){ 
+            m_bHammetimeOutCatch = true; 
+            startBrakeOnTimeout();
+            brakeOn();
+        },
+        OPS_HAMMER_TIMER_EDGE
+    );
+
+    timerAlarmWrite(
+        tmrOpsHammer,
+        OPS_HAMMER_TIMER_CATCH_PERIOD_uSEC,
+        OPS_HAMMER_TIMER_RUN_ONCE
+    );
+
+    timerAlarmEnable(tmrOpsHammer);
+}
+
 void setupOps() {
 
     setUpOpsITRTimer();
 
-    setUpHammerStrikeTimer();
+    // startHammertimeOut();
 
 }
 
@@ -194,6 +282,13 @@ bool isDoorOpen() {
     }
 
     return g_ops.wantDoorClose;
+}
+
+/* TODO: 
+Called with every execution of runOperations() 
+Returns true while the fist is too high */
+bool isTopLimitFault() {
+    // 
 }
 
 /* Called with every execution of runOperations() 
@@ -391,6 +486,7 @@ Error* doRaiseHammer() {
     return nullptr;
 }
 
+uint32_t m_ui32HammerDropTime = 0;
 /* Called by runOperations() when:
 - the previous target was reached
 - and g_ops.dropHammer is set 
@@ -402,23 +498,53 @@ Sets g_ops.wantStrike
 Returns an error if the time runs out */
 Error* doDropHammer () {
 
+    /* */
+    if( !g_ops.wantBrakeOff
+    ) {
+        g_ops.wantBrakeOff = true;
+        startBrakeOffTimeout();
+    }
+    
+    if( !m_bBrakeOffTimeout
+    )   return nullptr;                         // Go no further until the brake off time has passed
+   
+    if( !g_state.pressure                       // We have no brake pressure
+    )   return &ERR_BRAKE_OFF_PRESSURE_LOW;     // We will fail to drop the hammer! ABORT!
+
+    /* The brake is off */
+
     if( !g_ops.wantStrike                       /* We have yet to drop the hammer */
     ) { 
+        m_ui32HammerDropTime =                  // We want to know what is hammer time
+            millis() + HAMMER_STRIKE_mSEC;
+
         statusUpdate(STATUS_DROP_HAMMER);       // We drop the hammer 
         magnetOff();                            // With fist open
-        brakeOff();                             // With brake off    
-        m_bHammertimeOut = false;               // With timeout flag cleared
-        timerAlarmEnable(tmrHammeStrike);       // With hammertime upon us
+        startHammerCatchTimer();                // And prepare to catch it
 
         g_ops.wantStrike = true;                /* And we yearn for the strike of the hammer */
     }
 
-    if( !m_bHammertimeOut                       /* There is still time */
-    )   return nullptr;                         /* We await the hammer strike */
+    if( !m_bBrakeOnTimeout
+    )   return nullptr;                         // Go no further until the brake on time has passed
+
+    if( g_state.pressure                        /* We have pressure when we should have none */
+    ) {  
+        g_ops.wantAid = true;                   // We yearn for aid
+        return &ERR_BRAKE_ON_PRESSURE_HIGH;     // We yearn for specific aid
+    }
+
+    if( millis() < m_ui32HammerDropTime         /* There is still time */
+    )   return nullptr;                         // We yearn for the hammer strike 
 
     /* Time has run out */
  
+    g_ops.wantBrakeOff = false;                 // We stop yearning to release the brake
+    m_bBrakeOffTimeout = false; 
+    
     g_ops.wantStrike = false;                   // We stop yearning for the hammer strike, lest we look like fools!
+    // m_bHammertimeOutStrike = false;
+    
     g_ops.dropHammer = false;                   // We have already answered this challenge 
 
     if( !g_state.anvilLimit                     /* The hammer has failed to strike */

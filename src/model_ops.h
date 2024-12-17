@@ -63,6 +63,8 @@ public:
 
     bool raiseHammer;
     bool dropHammer;
+    bool wantBrakeOff;
+    bool wantBrakeOn;
     bool wantStrike;
 
     int cycleCount;
@@ -135,6 +137,7 @@ public:
 
     void clearProgress() {
         cycleCount = 0;
+        stepTarget = 0;
     }
 
     void cmdReset() {
