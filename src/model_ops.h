@@ -20,6 +20,7 @@
 
 class Ops {
 private:
+    const char* diagnosticModeKey = "\"diagnostic_mode\":";
 
     const char* wantEStopReleaseKey = "\"want_estop_release\":";
     const char* wantDoorCloseKey = "\"want_door_close\":";
@@ -47,6 +48,7 @@ private:
     char jsonOut[MQTT_PUB_BUFFER_SIZE];
 
 public:
+    bool diagnosticMode;
 
     bool wantEStopRelease;
     bool wantDoorClose;
@@ -74,6 +76,8 @@ public:
     char status[JSON_FIELD_STRING_LENGTH];
 
     Ops(
+        bool diag_mode = false,
+
         bool wnt_es = false,
         bool wnt_dr = false,
         bool wnt_cfg = false,
@@ -97,6 +101,8 @@ public:
 
         const char stat[JSON_FIELD_STRING_LENGTH]="initialized"
     ) {
+        diagnosticMode = diag_mode;
+
         wantEStopRelease = wnt_es;
         wantDoorClose = wnt_dr;
         wantConfig = wnt_cfg;
@@ -151,6 +157,8 @@ public:
 
     /* TODO: MAKE READ ONLY AFTER DEBUG */
     void parseFromJSON(const char* jsonString) {
+        jsonParseBool(jsonString, diagnosticModeKey, diagnosticMode);
+
         jsonParseBool(jsonString, wantEStopReleaseKey, wantEStopRelease);
         jsonParseBool(jsonString, wantDoorCloseKey, wantDoorClose);
         jsonParseBool(jsonString, wantConfigKey, wantConfig);
@@ -177,6 +185,8 @@ public:
         
     char* serializeToJSON() {
         jsonSerializeStart(jsonOut);
+
+        jsonSerializeBool(jsonOut, diagnosticModeKey, diagnosticMode);
 
         jsonSerializeBool(jsonOut, wantEStopReleaseKey, wantEStopRelease);
         jsonSerializeBool(jsonOut, wantDoorCloseKey, wantDoorClose);
@@ -211,6 +221,8 @@ public:
 
     void debugPrintValues() {
         Serial.printf("Ops.debugPrintValues() :\n");
+
+        Serial.printf("DIAGNOSTIC MODE: %s\n", btoa(diagnosticMode));
 
         Serial.printf("Want EStop Release: %s\n", btoa(wantEStopRelease));
         Serial.printf("Want Door Close: %s\n", btoa(wantDoorClose));

@@ -30,10 +30,22 @@ void setup() {
 
 void loop() {
 
+    Error* err = nullptr;
+
     serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
     
-    Error* err = runOperations();
-    if( err
-    )   mqttPublishError(err);
+    if( !g_ops.diagnosticMode
+    ) {
+        err = runOperations();
+    
+        if( err
+        )   mqttPublishError(err);
+    } else {
+        
+        if( !motorTargetReached() ) {
+            motorGetPosition();              
+            setMQTTPubFlag(PUB_OPS_POS);
+        }
+    }
 
 }

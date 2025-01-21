@@ -114,14 +114,17 @@ Error ERR_MOT_POS_FIX_LOST("motor position fix has been lost");
 Error* motorGetPosition() {
 
     g_state.motorSteps = m_motor.getCurrentPositionInSteps();
-    
+
     g_state.currentHeight = 
         ((float)g_state.motorSteps / MOT_STEP_PER_REV) 
         * FIST_INCH_PER_REV;
 
-    if( g_state.motorSteps < 0                          /* We're lost */
-    ||  g_state.motorSteps > FIST_HEIGHT_MAX_STEP       /* We're lost */
-    )   return &ERR_MOT_POS_FIX_LOST;                   /* Tell them we.re lost */
+    if( !g_ops.diagnosticMode                               /* We're not currently diagnosing something */
+    &&  (   g_state.motorSteps < 0                          /* We're lost */
+        ||  g_state.motorSteps > FIST_HEIGHT_MAX_STEP       /* We're lost */
+        )
+    )   return &ERR_MOT_POS_FIX_LOST;                       /* Tell them we.re lost */
+
 
     return nullptr;
 }
@@ -157,11 +160,11 @@ Error* motorSetSpeed(uint32_t stepsPerSec) {
     return err;
 }
 
-Error ERR_MOT_TARGET_ZERO("motor target steps must not be zero");
+// Error ERR_MOT_TARGET_ZERO("motor target steps must not be zero");
 Error* motorSetCourse(int32_t steps) {  
     
-    if( steps == 0                                      /* We can't step to that */
-    )   return &ERR_MOT_TARGET_ZERO;                    // We must protest
+    // if( steps == 0                                      /* We can't step to that */
+    // )   return &ERR_MOT_TARGET_ZERO;                    // We must protest
 
     m_motor.setTargetPositionRelativeInSteps(steps); 
 

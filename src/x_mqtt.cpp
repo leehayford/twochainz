@@ -2,38 +2,52 @@
 
 
 /* MQTT Pubclications *************************************************************************************/
-// char* SIG = mqttTopic(MQTT_TOPIC_PREFIX, "sig/");
 
 mqttPublication m_mqttPubs[N_PUBS] = {
-    {"esp32/sig/error", 0, (mqttPubFunc)&mqttPublishError},
-    {"esp32/sig/state", 0, (mqttPubFunc)&mqttPublishState},
-    {"esp32/sig/config", 0, (mqttPubFunc)&mqttPublishConfig},
+    {"error", 0, (mqttPubFunc)&mqttPublishError},
+    {"state", 0, (mqttPubFunc)&mqttPublishState},
+    {"config", 0, (mqttPubFunc)&mqttPublishConfig},
 
-    {"esp32/sig/ops", 0, (mqttPubFunc)&mqttPublishOps},
-    {"esp32/sig/ops/pos", 0, (mqttPubFunc)&mqttPublishOpsPosition},
+    {"ops", 0, (mqttPubFunc)&mqttPublishOps},
+    {"ops/pos", 0, (mqttPubFunc)&mqttPublishOpsPosition},
 };
 
 void mqttPublishError(Error* err) { /* TODO: CREATE ERROR CLASS & INSTANCES */
-    publishMQTTMessage(m_mqttPubs[PUB_ERROR].topic, (char *)err->getJSON()); 
+
+    char pTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
+    mqttSIGBuilder(pTopic, m_mqttPubs[PUB_ERROR].topic);
+    publishMQTTMessage(pTopic, (char *)err->getJSON());
 }
 
 void mqttPublishState() { 
-    publishMQTTMessage(m_mqttPubs[PUB_STATE].topic, (char *)g_state.serializeToJSON()); 
+    
+    char pTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
+    mqttSIGBuilder(pTopic, m_mqttPubs[PUB_STATE].topic);
+    publishMQTTMessage(pTopic, (char *)g_state.serializeToJSON());
 }
 
 void mqttPublishConfig() { 
-    publishMQTTMessage(m_mqttPubs[PUB_CONFIG].topic, (char *)g_config.serializeToJSON()); 
+
+    char pTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
+    mqttSIGBuilder(pTopic, m_mqttPubs[PUB_CONFIG].topic);
+    publishMQTTMessage(pTopic, (char *)g_config.serializeToJSON()); 
 }
 
 
 void mqttPublishOps() { 
-    publishMQTTMessage(m_mqttPubs[PUB_OPS].topic, (char *)g_ops.serializeToJSON()); 
+
+    char pTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
+    mqttSIGBuilder(pTopic, m_mqttPubs[PUB_OPS].topic);
+    publishMQTTMessage(pTopic, (char *)g_ops.serializeToJSON()); 
 }
 
 void mqttPublishOpsPosition() {
     char buffer[20]; 
     snprintf(buffer, sizeof(buffer), "%.8f", g_state.currentHeight);
-    publishMQTTMessage(m_mqttPubs[PUB_OPS_POS].topic, buffer);
+
+    char pTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
+    mqttSIGBuilder(pTopic, m_mqttPubs[PUB_OPS_POS].topic);
+    publishMQTTMessage(pTopic, buffer);
 }
 
 
@@ -43,28 +57,126 @@ void setMQTTPubFlag(eMqttPubMap_t pub) {
 
 
 /* MQTT Subscriptions *************************************************************************************/
-// char* CMD = mqttTopic(MQTT_TOPIC_PREFIX, "cmd/");
 
+/* DIAGNOSTIC COMMANDS ****************************************************************/
 
-void mqttHandleCMDTestMotOn(char* msg) { /* TODO: Remove for production */
+void mqttHandleCMDEnableDiagnostics(char* msg) { 
+    g_ops.diagnosticMode = true; 
+    mqttHandleCMDReport(msg);
+}
+void mqttHandleCMDDisableDiagnostics(char* msg) { 
+    g_ops.diagnosticMode = false;
+    mqttHandleCMDReport(msg); 
+}
+
+void mqttHandleCMDBrakeOn(char* msg) { 
+    if( g_ops.diagnosticMode
+    ) {
+        brakeOn();
+        mqttHandleCMDReport(msg);
+    }
+}
+void mqttHandleCMDBrakeOff(char* msg) { 
+    if( g_ops.diagnosticMode
+    ) {
+        brakeOff();
+        mqttHandleCMDReport(msg);
+    }
+}
+
+void mqttHandleCMDMagnetOn(char* msg) { 
+    if( g_ops.diagnosticMode
+    ) {
+        magnetOn();
+        mqttHandleCMDReport(msg);
+    }
+}
+void mqttHandleCMDMagnetOff(char* msg) { 
+    if( g_ops.diagnosticMode
+    ) {
+        magnetOff();
+        mqttHandleCMDReport(msg);
+    }
+}
+
+void mqttHandleCMDMotorOn(char* msg) { 
+    if( g_ops.diagnosticMode
+    ) {
+        motorOn();
+        mqttHandleCMDReport(msg);
+    }
+}
+void mqttHandleCMDMotorOff(char* msg) { 
+    if( g_ops.diagnosticMode
+    ) {
+        motorOff();
+        mqttHandleCMDReport(msg);
+    }
+}
+
+void mqttHandleCMDMoveUp(char* msg) { 
+    if( g_ops.diagnosticMode
+    ) {
+        diagnosticMove(true);
+        mqttHandleCMDReport(msg);
+    }
+}
+void mqttHandleCMDMoveDown(char* msg) { 
+    if( g_ops.diagnosticMode
+    ) {
+        diagnosticMove(false);
+        mqttHandleCMDReport(msg);
+    }
+}
+void diagnosticMove(bool up) {
+
     motorOn();
+    
+    Error* err = nullptr;
+    err = motorSetSpeed(MOT_STEPS_PER_SEC_LOW);
+    if( err
+    )   mqttPublishError(err);
+
+    err = motorGetPosition();         
+    if( err
+    )   mqttPublishError(err);
+
+    // Serial.printf("\nCurrent position: %d\n", g_state.motorSteps);
+    int32_t course = (up ? MOT_DIAG_ONE_DEG : MOT_DIAG_ONE_DEG * -1 );
+    // Serial.printf("\nMoving: %d\n", course);
+
+    err = motorSetCourse(course);
+    if( err
+    )   mqttPublishError(err);
+
 }
 
-void mqttHandleCMDTestMotOff(char* msg) { /* TODO: Remove for production */
-    motorOff();
-}
+
+/* END DIAGNOSTIC COMMANDS ************************************************************/
 
 mqttSubscription m_mqttSubs[N_SUBS] = {
-    {"esp32/cmd/report", (mqttCMDFunc)&mqttHandleCMDReport},
-    {"esp32/cmd/state", (mqttCMDFunc)&mqttHandleCMDState},
-    {"esp32/cmd/config", (mqttCMDFunc)&mqttHandleCMDConfig},
 
-    {"esp32/cmd/ops", (mqttCMDFunc)&mqttHandleCMDOps},
-    {"esp32/cmd/ops/reset", (mqttCMDFunc)&mqttHandleCMDOpsReset},
-    {"esp32/cmd/ops/continue", (mqttCMDFunc)&mqttHandleCMDOpsContinue},
+    {"report", (mqttCMDFunc)&mqttHandleCMDReport},
+    {"state", (mqttCMDFunc)&mqttHandleCMDState},
+    {"config", (mqttCMDFunc)&mqttHandleCMDConfig},
 
-    {"esp32/cmd/test/mot_on", (mqttCMDFunc)&mqttHandleCMDTestMotOn},
-    {"esp32/cmd/test/mot_off", (mqttCMDFunc)&mqttHandleCMDTestMotOff},
+    {"ops", (mqttCMDFunc)&mqttHandleCMDOps},
+    {"reset", (mqttCMDFunc)&mqttHandleCMDOpsReset},
+    {"continue", (mqttCMDFunc)&mqttHandleCMDOpsContinue},
+
+    {"diag/enable", (mqttCMDFunc)&mqttHandleCMDEnableDiagnostics},
+    {"diag/disable", (mqttCMDFunc)&mqttHandleCMDDisableDiagnostics},
+
+    {"diag/brake_on", (mqttCMDFunc)&mqttHandleCMDBrakeOn},
+    {"diag/brake_off", (mqttCMDFunc)&mqttHandleCMDBrakeOff},
+
+    {"diag/magnet_on", (mqttCMDFunc)&mqttHandleCMDMagnetOn},
+    {"diag/magnet_off", (mqttCMDFunc)&mqttHandleCMDMagnetOff},
+
+    {"diag/motor_on", (mqttCMDFunc)&mqttHandleCMDMotorOn},
+    {"diag/motor_off", (mqttCMDFunc)&mqttHandleCMDMotorOff},
+    {"diag/move_up", (mqttCMDFunc)&mqttHandleCMDMoveUp},
+    {"diag/move_down", (mqttCMDFunc)&mqttHandleCMDMoveDown},
 };
 
 
@@ -101,17 +213,16 @@ void mqttHandleCMDOpsContinue(char* msg) {
 }
 
 
-
-
-
 /* MQTT General Setup *************************************************************************************/
 void mqttCallBack_X(char* topic, byte* message, unsigned int length) {
     Serial.printf("\nMessage arrived on topic: %s", topic);
     for (mqttSubscription sub : m_mqttSubs) {
         
-        if (strcmp(topic, sub.topic) == 0) {
-            Serial.printf("\nSUB: %s\n", sub.topic);
-            sub.func((char *)message);
+        char sTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
+        mqttCMDBuilder(sTopic, sub.topic);
+        if (strcmp(topic, sTopic) == 0) {
+            Serial.printf("\nSUB: %s\n", sTopic);
+            sub.func((char*) message);
             break;
         }
     }

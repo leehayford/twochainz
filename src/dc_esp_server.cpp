@@ -96,10 +96,15 @@ void sendWSString(String str) {
 /* MQTT */
 WiFiClient m_mqttWiFiClient;
 PubSubClient m_mqttClient(m_mqttWiFiClient);
-
-char* mqttTopic(const char* prfx, const char* topic) {
-    strcat((char *) prfx, topic);
-    return (char*)prfx;
+void mqttCMDBuilder(char* fullTopic, const char* topic) {
+    mqttTopicBuilder(fullTopic, "/cmd/", topic);
+}
+void mqttSIGBuilder(char* fullTopic, const char* topic) {
+    mqttTopicBuilder(fullTopic, "/sig/", topic);
+}
+void mqttTopicBuilder(char* fullTopic, const char* prfx, const char* topic) {
+    strcat((char*) fullTopic, prfx);
+    strcat((char*) fullTopic, topic);
 }
 
 void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCallBackFunc func) {
@@ -122,9 +127,13 @@ void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* sub
 
         if (m_mqttClient.connect("DOIT-ESP32-DKV1-PIO-1", user, pw)) {
             Serial.println("MQTT conneted");
+            
+            char fullTopic[50] = SECRET_MQTT_DEVICE;
             for (int i = 0; i < length; i++) {
-                m_mqttClient.subscribe(subs[i].topic);
-                Serial.printf("Subscribed to: %s\n", subs[i].topic);
+                strcpy(fullTopic, SECRET_MQTT_DEVICE);
+                mqttCMDBuilder(fullTopic, subs[i].topic);
+                m_mqttClient.subscribe(fullTopic);
+                Serial.printf("Subscribed to: %s\n", fullTopic);
             }
 
         } else {
@@ -142,6 +151,8 @@ void publishMQTTMessage(const char* topic, char* msg) {
     uint32_t length = strlen(msg);
     byte* p = (byte*)malloc(length);
     memcpy(p, msg, length);
+    
+    // Serial.printf("Publishing to: %s\n", topic);
     m_mqttClient.publish(topic, p, length);
     free(p);
 }

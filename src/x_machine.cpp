@@ -289,6 +289,7 @@ Called with every execution of runOperations()
 Returns true while the fist is too high */
 bool isTopLimitFault() {
     // 
+    return false;
 }
 
 /* Called with every execution of runOperations() 

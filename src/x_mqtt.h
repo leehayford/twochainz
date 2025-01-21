@@ -6,7 +6,6 @@
 #include "x_models.h"
 #include "x_io.h"
 
-#define MQTT_TOPIC_PREFIX "esp32/"
 
 typedef enum  {
     PUB_ERROR = 0,
@@ -32,7 +31,7 @@ void mqttPublishOps();
 void mqttPublishOpsPosition();  
 
 
-#define N_SUBS 8
+#define N_SUBS 16
 
 /* Message IGNORED 
 Sets MQTT publish flags: 
@@ -78,6 +77,38 @@ Sets MQTT publish flags:
 - Ops */ 
 void mqttHandleCMDOpsContinue(char* msg);
 
+
+/* DIAGNOSTIC COMMANDS ****************************************************************/
+
+/* Message IGNORED */
+void mqttHandleCMDEnableDiagnostics(char* msg);
+/* Message IGNORED */
+void mqttHandleCMDDisableDiagnostics(char* msg);
+
+/* Message IGNORED */
+void mqttHandleCMDBrakeOn(char* msg);
+/* Message IGNORED */
+void mqttHandleCMDBrakeOff(char* msg);
+
+/* Message IGNORED */
+void mqttHandleCMDMagnetOn(char* msg);
+/* Message IGNORED */
+void mqttHandleCMDMagnetOff(char* msg);
+
+/* Message IGNORED */
+void mqttHandleCMDMotorOn(char* msg);
+/* Message IGNORED */
+void mqttHandleCMDMotorOff(char* msg);
+
+/* Message IGNORED 
+Moves 0.9° UP @ default low speed */
+void mqttHandleCMDMoveUp(char* msg);
+/* Message IGNORED 
+Moves 0.9° DOWN @ default low speed */
+void mqttHandleCMDMoveDown(char* msg);
+void diagnosticMove(bool up);
+
+/* END DIAGNOSTIC COMMANDS ************************************************************/
 
 
 extern void mqttCallBack_X(char* topic, byte* message, unsigned int length);

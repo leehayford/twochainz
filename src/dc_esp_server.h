@@ -7,6 +7,7 @@
 #include <PubSubClient.h> // https://github.com/knolleary/pubsubclient/archive/master.zip
 #include "LittleFS.h"
 
+#include "dc_secret.h"
 
 /* FILE SYSTEM */
 #define FS_TEST_FILE "/fs_test.txt"
@@ -29,6 +30,7 @@ extern void sendWSString(String str);
 
 /* MQTT */
 #define MQTT_PUB_BUFFER_SIZE 1024
+#define MQTT_MAX_TOPIC 50
 
 typedef void (*mqttCMDFunc) (char* msg);
 typedef struct {const char* topic; mqttCMDFunc func;} mqttSubscription;
@@ -36,7 +38,9 @@ typedef struct {const char* topic; mqttCMDFunc func;} mqttSubscription;
 typedef void (*mqttPubFunc) ();
 typedef struct {const char* topic; int flag; mqttPubFunc func;} mqttPublication;
 
-extern char* mqttTopic(const char* prfx, const char* topic);
+void mqttTopicBuilder(char* fullTopic, const char* prfx, const char* topic);
+extern void mqttCMDBuilder(char* fullTopic, const char* topic);
+extern void mqttSIGBuilder(char* fullTopic, const char* topic);
 
 typedef void (*mqttCallBackFunc) (char* topic, byte* message, unsigned int length);
 extern void setupMQTTClient(const char* mqttBrokerIP, int mqttBrokerPort, mqttCallBackFunc func);
