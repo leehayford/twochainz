@@ -211,12 +211,12 @@ extern void motorOn();
 #define MOT_DIR_UP HIGH
 #define MOT_DIR_DOWN LOW
 #define MOT_STEPS_PER_SEC_LOW 500
-#define MOT_STEPS_PER_SEC_HIGH 4000
-#define MOT_STEPS_PER_SEC_ACCEL 2000
+#define MOT_STEPS_PER_SEC_HIGH 2000
+#define MOT_STEPS_PER_SEC_ACCEL 1000
 #define MOT_SERVICE_CORE 0 // Which processor core onwhich to run the stepper service 
 
 #define MOT_REVOVERY_STEPS -500 // 1/4 Revolution
-#define MOT_DIAG_ONE_DEG 33  // ~ 0.1" 
+#define MOT_DIAG_ONE_DEG 83  // ~ 0.25" 
 #define MOT_STEP_PER_REV 2000
 
 
