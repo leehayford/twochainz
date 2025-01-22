@@ -125,7 +125,6 @@ public:
 
 #define DOUT_PIN_ACTIVE_LOW true
 #define DOUT_PIN_ACTIVE_HIGH false
-#define DOUT_SANS_STATE false
 
 #define OUT_PIN_COUNT 5
 typedef enum {
