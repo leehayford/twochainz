@@ -158,7 +158,7 @@ void statusUpdate(const char* status_msg) {
 }
 
 void getRecoveryCourseAndSeed() {
-    g_ops.stepTarget = MOT_REVOVERY_STEPS;      // We will do 1/4 revolution (DOWN) and reassess
+    g_ops.stepTarget = MOT_REVOVERY_STEPS;      // We will attempt to do the full 48.0" (DOWN) and reassess
     g_ops.stepHz = MOT_STEPS_PER_SEC_LOW;       // We will proceed at SLOW rip 
 }
 
@@ -199,8 +199,6 @@ Error* moveToTarget() {
 
     if( motorTargetReached()
     ) {
-        motorOn();                             // Make ready our steed! 
-
         err = motorSetSpeed(g_ops.stepHz);
         if( err                                     /* We have been given a warning */
         )   mqttPublishError(err);                  // We pass along the warning
@@ -230,7 +228,7 @@ bool isEStopPressed() {
     
     if( g_state.eStop                           /* The emergency stop button is pressed */
     ) {
-        motorOff();                             // We stop moving
+        motorStop();                            // We stop moving
         brakeOn();                              // We apply the brake
         magnetOff();                            // We turn off the magnet
 
@@ -264,7 +262,7 @@ bool isDoorOpen() {
     
     if( g_state.doorOpen                        /* The door is open */
     ) {
-        motorOff();                             // Stop moving
+        motorStop();                            // Stop moving
         brakeOn();                              // Apply the brake
         magnetOff();                            // Turn off the magnet
 
@@ -339,7 +337,7 @@ void doSeekHammer() {
 
     if( g_state.fistLimit                       /* We found the hammer */
     ) { 
-        motorOff();                             // Stop moving while we secure the hammer 
+        motorStop();                            // Stop moving while we secure the hammer 
         magnetOn();                             // Secure the hammer
         g_ops.seekHammer = false;               // Stop seeking the hammer, lest you look like a fool!
         return;                                 // Take the hammer and leave this place! 
@@ -351,7 +349,6 @@ void doSeekHammer() {
         // Our search begins!
 
     g_ops.seekHammer = true;                    // We seek the hammer
-    motorOn();                                  // With motor on
     magnetOff();                                // With fist open
     brakeOn();                                  // With brake on
     // Our search continues...
@@ -364,6 +361,8 @@ void doSeekAnvil() {
 
     if( g_state.anvilLimit                      /* We found the anvil */
     ) {
+        motorStop();                            // Stop moving while we reduce speed
+        motorSetSpeed(MOT_STEPS_PER_SEC_LOW);   // Slow daaaahn
         g_ops.seekAnvil = false;                // Stop seeking the anvil, lest you look like a fool!
         return;                                 // Take the anvil and leave this place... no wait that's heavy; I'll go; the anvil is yours now... I... don't really know what I'm... I just ummm, don't have anywh- Hey! where are you going? No. Sorry. You've got you own thing. You know what, I'm sure I'll figure it out; don't worry about it...
         // Our search has ended.
@@ -374,7 +373,6 @@ void doSeekAnvil() {
         // Our search begins!
 
     g_ops.seekAnvil = true;                     // We seek the anvil
-    motorOn();                                  // With motor on
     magnetOn();                                 // With fist closed
     brakeOff();                                 // With brake off
     // Our search continues...
@@ -397,7 +395,6 @@ void doSeekHome() {
         // Our search begins!
 
     g_ops.seekHome = true;                      // We seek home
-    motorOn();                                  // With motor on
     magnetOn();                                 // With fist closed
     brakeOff();                                 // With brake off
     // Our search continues...
@@ -420,7 +417,8 @@ Error* doGoHome() {
     &&  g_state.anvilLimit
     &&  g_state.homeLimit
     )   {
-        motorOff();                                 // Stop moving
+        motorStop();                                // Stop moving
+        /* TODO: CHECK STEP ERROR */
         motorSetPositionAsZero();                   // Reset our home position
         g_ops.goHome = false;                       // We stop going home, lest we look like fools!
         g_ops.reorient = false;                     // Clear the reorient flag (in case that's why we sought home)
@@ -563,7 +561,6 @@ Error* doDropHammer () {
 int32_t nextPosUpdate = 0;
 /* Called by runOperations() when: 
 - position != taget
-- g_state.motorOn is set 
 
 If position update period has passed:
 - sends current position 
@@ -618,7 +615,7 @@ Error* runOperations() {
     ||  g_ops.raiseHammer                       /* We are moving */
     )   doPositionUpdate();                     // All await word of our travels
     else
-        motorOff();                             // Stop going
+        motorStop();                            // Stop going
 
     if( g_ops.goHome                            /* We've been called home */
     )   return doGoHome();                      // All await our return
@@ -630,7 +627,7 @@ Error* runOperations() {
     )   return doDropHammer();                  // We await the hammer strike 
     
     // if( motorTargetReached()                 /* Our position matched our target  */
-    // )   motorOff();                          // We stop trying to reach our target, lest we look like fools!
+    // )   motorStop();                         // We stop trying to reach our target, lest we look like fools!
     
     return nullptr;
 

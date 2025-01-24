@@ -119,18 +119,17 @@ public:
 /* RELAY CONTROL *************************************************************************************/
 #define PIN_OUT_BRAKE 23                        // Relay Control -> Output -> Low = Brake is engaged
 #define PIN_OUT_MAGNET 22                       // Relay Control -> Output -> Low = Brake is engaged
-#define PIN_OUT_MOT_EN 13                       // Motor Enable     -> Output -> LOW = Enabled
+// #define PIN_OUT_MOT_EN 13                       // Motor Enable     -> Output -> LOW = Enabled
 #define PIN_OUT_MOT_DIR 12                      // Motor Direction  -> Output -> HIGH = ???
 #define PIN_OUT_MOT_STEP 14                     // Motor Move       -> Output -> One pulse per step
 
 #define DOUT_PIN_ACTIVE_LOW true
 #define DOUT_PIN_ACTIVE_HIGH false
 
-#define OUT_PIN_COUNT 5
+#define OUT_PIN_COUNT 4
 typedef enum {
     DOUT_BRAKE = 0,
     DOUT_MAGNET,
-    DOUT_MOTOR,
     DOUT_MOT_STEP,
     DOUT_MOT_DIR
 } eDOUTPinMap_t;
@@ -199,8 +198,7 @@ extern void brakeOff();
 extern void magnetOn();
 extern void magnetOff();
 
-extern void motorOff();
-extern void motorOn();
+extern void motorStop();
 
 /* RELAY CONTROL *** END ***************************************************************************/
 
@@ -211,14 +209,13 @@ extern void motorOn();
 #define MOT_DIR_UP HIGH
 #define MOT_DIR_DOWN LOW
 #define MOT_STEPS_PER_SEC_LOW 500
-#define MOT_STEPS_PER_SEC_HIGH 2000
-#define MOT_STEPS_PER_SEC_ACCEL 1000
+#define MOT_STEPS_PER_SEC_HIGH 4000
+#define MOT_STEPS_PER_SEC_ACCEL 4000
 #define MOT_SERVICE_CORE 0 // Which processor core onwhich to run the stepper service 
 
-#define MOT_REVOVERY_STEPS -500 // 1/4 Revolution
-#define MOT_DIAG_ONE_DEG 83  // ~ 0.25" 
+#define MOT_REVOVERY_STEPS -16000 // 48.0"
+#define MOT_DIAG_ONE_DEG 2000  // ~ 6.0" 
 #define MOT_STEP_PER_REV 2000
-
 
 
 extern Error* motorSetPositionAsZero();

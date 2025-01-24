@@ -18,7 +18,6 @@ private:
 
     const char* brakeOnKey = "\"brake_on\":";
     const char* magnetOnKey = "\"magnet_on\":";
-    const char* motorOnkey = "\"motor_on\":";
 
     const char* motorStepsKey = "\"motor_steps\":";
     const char* currentHeightKey = "\"current_height\":";
@@ -38,7 +37,6 @@ public:
     /* Relay control state */
     bool breakOn;
     bool magnetOn;
-    bool motorOn;
     
     int motorSteps;
     float currentHeight;
@@ -54,7 +52,6 @@ public:
         
         bool brake_on = false,
         bool magnet_on = false,
-        bool motor_on = false,
 
         int motor_steps = 0,
         float height = 0.0
@@ -69,7 +66,6 @@ public:
         
         breakOn = brake_on;
         magnetOn = magnet_on;
-        motorOn = motor_on;
 
         motorSteps = motor_steps;
         currentHeight = height;
@@ -87,7 +83,6 @@ public:
         
         jsonParseBool(jsonString, brakeOnKey, breakOn);
         jsonParseBool(jsonString, magnetOnKey, magnetOn);
-        jsonParseBool(jsonString, motorOnkey, motorOn);
 
         jsonParseInt(jsonString, motorStepsKey, motorSteps);
         jsonParseFloat(jsonString, currentHeightKey, currentHeight);
@@ -106,7 +101,6 @@ public:
         
         jsonSerializeBool(jsonOut, brakeOnKey, breakOn);
         jsonSerializeBool(jsonOut, magnetOnKey, magnetOn); 
-        jsonSerializeBool(jsonOut, motorOnkey, motorOn); 
 
         jsonSerializeInt(jsonOut, motorStepsKey, motorSteps);
         jsonSerializeFloat(jsonOut, currentHeightKey, currentHeight);
@@ -132,7 +126,6 @@ public:
         
         Serial.printf("Brake on: %s\n", btoa(breakOn));
         Serial.printf("Magnet on: %s\n", btoa(magnetOn));
-        Serial.printf("Motor Enabled: %s\n", btoa(motorOn));
 
         Serial.printf("Motor steps: %d\n", motorSteps);
         Serial.printf("Current height: %f\n", currentHeight);

@@ -84,10 +84,6 @@ DOUTPin doutMagnet(PIN_OUT_MAGNET, &g_state.magnetOn, DOUT_PIN_ACTIVE_HIGH);
 void magnetOn() { doutMagnet.enable(); } /* TODO: ERROR CHECKING */
 void magnetOff() { doutMagnet.disable(); } /* TODO: ERROR CHECKING */
 
-DOUTPin doutMotor(PIN_OUT_MOT_EN, &g_state.motorOn, DOUT_PIN_ACTIVE_LOW);
-void motorOn() { doutMotor.enable(); } /* TODO: ERROR CHECKING */
-void motorOff() { doutMotor.disable(); } /* TODO: ERROR CHECKING */
-
 DOUTPin doutMotDir(PIN_OUT_MOT_DIR, nullptr, NULL, DOUT_PIN_ACTIVE_LOW);
 
 DOUTPin doutMotStep(PIN_OUT_MOT_STEP, nullptr, NULL, DOUT_PIN_ACTIVE_LOW);
@@ -97,7 +93,6 @@ void setupDigitalOutputs() {
 
     doutBrake.setupPin();
     doutMagnet.setupPin();
-    doutMotor.setupPin();
     doutMotDir.setupPin();
     doutMotStep.setupPin();
 
@@ -160,16 +155,14 @@ Error* motorSetSpeed(uint32_t stepsPerSec) {
     return err;
 }
 
-// Error ERR_MOT_TARGET_ZERO("motor target steps must not be zero");
 Error* motorSetCourse(int32_t steps) {  
     
-    // if( steps == 0                                      /* We can't step to that */
-    // )   return &ERR_MOT_TARGET_ZERO;                    // We must protest
-
     m_motor.setTargetPositionRelativeInSteps(steps); 
 
     return nullptr;
 }
+
+void motorStop() { motorSetCourse(0); }
 
 bool motorTargetReached() { 
     return (m_motor.getDistanceToTargetSigned() == 0); 
@@ -178,7 +171,7 @@ bool motorTargetReached() {
 void setupMotor() {
     m_motor.connectToPins(doutMotStep.pin, doutMotDir.pin);
     m_motor.startAsService(MOT_SERVICE_CORE);
-    motorOff();
+    motorStop();
 }
 
 
@@ -198,7 +191,7 @@ void checkStateIOPins() {
 
     doutBrake.checkPin();
     doutMagnet.checkPin();
-    doutMotor.checkPin();
+    // doutMotor.checkPin();
 }
 
 void setupIO() {

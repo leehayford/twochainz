@@ -99,20 +99,6 @@ void mqttHandleCMDMagnetOff(char* msg) {
     }
 }
 
-void mqttHandleCMDMotorOn(char* msg) { 
-    if( g_ops.diagnosticMode
-    ) {
-        motorOn();
-        mqttHandleCMDReport(msg);
-    }
-}
-void mqttHandleCMDMotorOff(char* msg) { 
-    if( g_ops.diagnosticMode
-    ) {
-        motorOff();
-        mqttHandleCMDReport(msg);
-    }
-}
 
 void mqttHandleCMDMoveUp(char* msg) { 
     if( g_ops.diagnosticMode
@@ -130,8 +116,6 @@ void mqttHandleCMDMoveDown(char* msg) {
 }
 void diagnosticMove(bool up) {
 
-    motorOn();
-    
     Error* err = nullptr;
     err = motorSetSpeed(MOT_STEPS_PER_SEC_LOW);
     if( err
@@ -149,6 +133,14 @@ void diagnosticMove(bool up) {
     if( err
     )   mqttPublishError(err);
 
+}
+
+void mqttHandleCMDMotorStop(char* msg) { 
+    if( g_ops.diagnosticMode
+    ) {
+        motorStop();
+        mqttHandleCMDReport(msg);
+    }
 }
 
 
@@ -173,10 +165,9 @@ mqttSubscription m_mqttSubs[N_SUBS] = {
     {"diag/magnet_on", (mqttCMDFunc)&mqttHandleCMDMagnetOn},
     {"diag/magnet_off", (mqttCMDFunc)&mqttHandleCMDMagnetOff},
 
-    {"diag/motor_on", (mqttCMDFunc)&mqttHandleCMDMotorOn},
-    {"diag/motor_off", (mqttCMDFunc)&mqttHandleCMDMotorOff},
     {"diag/move_up", (mqttCMDFunc)&mqttHandleCMDMoveUp},
     {"diag/move_down", (mqttCMDFunc)&mqttHandleCMDMoveDown},
+    {"diag/motor_stop", (mqttCMDFunc)&mqttHandleCMDMotorStop},
 };
 
 

@@ -31,7 +31,7 @@ void mqttPublishOps();
 void mqttPublishOpsPosition();  
 
 
-#define N_SUBS 16
+#define N_SUBS 15
 
 /* Message IGNORED 
 Sets MQTT publish flags: 
@@ -96,9 +96,7 @@ void mqttHandleCMDMagnetOn(char* msg);
 void mqttHandleCMDMagnetOff(char* msg);
 
 /* Message IGNORED */
-void mqttHandleCMDMotorOn(char* msg);
-/* Message IGNORED */
-void mqttHandleCMDMotorOff(char* msg);
+void mqttHandleCMDMotorStop(char* msg);
 
 /* Message IGNORED 
 Moves 0.9° UP @ default low speed */
