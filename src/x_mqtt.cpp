@@ -12,7 +12,7 @@ mqttPublication m_mqttPubs[N_PUBS] = {
     {"ops/pos", 0, (mqttPubFunc)&mqttPublishOpsPosition},
 };
 
-void mqttPublishError(Error* err) { /* TODO: CREATE ERROR CLASS & INSTANCES */
+void mqttPublishError(Error* err) { 
 
     char pTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
     mqttSIGBuilder(pTopic, m_mqttPubs[PUB_ERROR].topic);
@@ -126,13 +126,10 @@ void diagnosticMove(bool up) {
     )   mqttPublishError(err);
 
     // Serial.printf("\nCurrent position: %d\n", g_state.motorSteps);
-    int32_t course = (up ? MOT_DIAG_ONE_DEG : MOT_DIAG_ONE_DEG * -1 );
+    int32_t course = (up ? MOT_DIAG_JOG_STEPS : MOT_DIAG_JOG_STEPS * -1 );
     // Serial.printf("\nMoving: %d\n", course);
 
-    err = motorSetCourse(course);
-    if( err
-    )   mqttPublishError(err);
-
+    motorSetCourse(course);
 }
 
 void mqttHandleCMDMotorStop(char* msg) { 

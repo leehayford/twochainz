@@ -37,15 +37,19 @@ void loop() {
     if( !g_ops.diagnosticMode
     ) {
         err = runOperations();
-    
         if( err
         )   mqttPublishError(err);
-    } else {
-        
-        if( !motorTargetReached() ) {
-            motorGetPosition();              
-            setMQTTPubFlag(PUB_OPS_POS);
-        }
+    } 
+    
+    else     
+    if( !motorTargetReached() 
+    ) {
+        err = motorGetPosition(); 
+        if( err
+        )   mqttPublishError(err);
+                     
+        setMQTTPubFlag(PUB_OPS_POS);
     }
+    
 
 }

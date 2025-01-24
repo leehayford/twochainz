@@ -88,14 +88,11 @@ DOUTPin doutMotDir(PIN_OUT_MOT_DIR, nullptr, NULL, DOUT_PIN_ACTIVE_LOW);
 
 DOUTPin doutMotStep(PIN_OUT_MOT_STEP, nullptr, NULL, DOUT_PIN_ACTIVE_LOW);
 
-
 void setupDigitalOutputs() {
-
     doutBrake.setupPin();
     doutMagnet.setupPin();
     doutMotDir.setupPin();
     doutMotStep.setupPin();
-
 }
 
 /* DIGITAL OUT *** END *****************************************************************************/
@@ -118,9 +115,11 @@ Error* motorGetPosition() {
     &&  (   g_state.motorSteps < 0                          /* We're lost */
         ||  g_state.motorSteps > FIST_HEIGHT_MAX_STEP       /* We're lost */
         )
-    )   return &ERR_MOT_POS_FIX_LOST;                       /* Tell them we.re lost */
-
-
+    )  { 
+        motorStop();                                        // Stop going places
+        g_ops.wantAid = true;                               // We yearn for aid
+        return &ERR_MOT_POS_FIX_LOST;                       // Tell everyone we're lost 
+    }
     return nullptr;
 }
 
@@ -155,14 +154,13 @@ Error* motorSetSpeed(uint32_t stepsPerSec) {
     return err;
 }
 
-Error* motorSetCourse(int32_t steps) {  
-    
+void motorSetCourse(int32_t steps) { 
     m_motor.setTargetPositionRelativeInSteps(steps); 
-
-    return nullptr;
 }
 
-void motorStop() { motorSetCourse(0); }
+void motorStop() { 
+    motorSetCourse(0); 
+}
 
 bool motorTargetReached() { 
     return (m_motor.getDistanceToTargetSigned() == 0); 

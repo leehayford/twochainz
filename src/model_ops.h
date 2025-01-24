@@ -9,6 +9,7 @@
 
 #define STATUS_ESTOP "yearns for release... of the emergency stop button"
 #define STATUS_DOOR_OPEN "yearns for closure... of the door"
+#define STATUS_TOP_LIMIT "yearns to be less high... of fist"
 #define STATUS_REQUEST_HELP "yearns for assistance"
 #define STATUS_WANT_CONFIG "yearns for purpose"
 
@@ -24,6 +25,7 @@ private:
 
     const char* wantEStopReleaseKey = "\"want_estop_release\":";
     const char* wantDoorCloseKey = "\"want_door_close\":";
+    const char* wantFistDownKey = "\"want_fist_down\":";
     const char* wantConfigKey = "\"want_config\":";
 
     const char* requestAidKey = "\"request_aid\":";
@@ -52,6 +54,7 @@ public:
 
     bool wantEStopRelease;
     bool wantDoorClose;
+    bool wantFistDown;
     bool wantConfig;
 
     bool requestAid;
@@ -80,6 +83,7 @@ public:
 
         bool wnt_es = false,
         bool wnt_dr = false,
+        bool wnt_fd = false,
         bool wnt_cfg = false,
 
         bool req_aid = false,
@@ -105,6 +109,7 @@ public:
 
         wantEStopRelease = wnt_es;
         wantDoorClose = wnt_dr;
+        wantFistDown = wnt_fd;
         wantConfig = wnt_cfg;
 
         requestAid = req_aid;
@@ -161,6 +166,7 @@ public:
 
         jsonParseBool(jsonString, wantEStopReleaseKey, wantEStopRelease);
         jsonParseBool(jsonString, wantDoorCloseKey, wantDoorClose);
+        jsonParseBool(jsonString, wantFistDownKey, wantFistDown);
         jsonParseBool(jsonString, wantConfigKey, wantConfig);
 
         jsonParseBool(jsonString, requestAidKey, requestAid);
@@ -190,6 +196,7 @@ public:
 
         jsonSerializeBool(jsonOut, wantEStopReleaseKey, wantEStopRelease);
         jsonSerializeBool(jsonOut, wantDoorCloseKey, wantDoorClose);
+        jsonSerializeBool(jsonOut, wantFistDownKey, wantFistDown);
         jsonSerializeBool(jsonOut, wantConfigKey, wantConfig);
 
         jsonSerializeBool(jsonOut, requestAidKey, requestAid);
@@ -225,7 +232,8 @@ public:
         Serial.printf("DIAGNOSTIC MODE: %s\n", btoa(diagnosticMode));
 
         Serial.printf("Want EStop Release: %s\n", btoa(wantEStopRelease));
-        Serial.printf("Want Door Close: %s\n", btoa(wantDoorClose));
+        Serial.printf("Want Door Closed: %s\n", btoa(wantDoorClose));
+        Serial.printf("Want Fist Down: %s\n", btoa(wantFistDown));
         Serial.printf("Want Configuration: %s\n", btoa(wantConfig));
 
         Serial.printf("Request Aid: %s\n", btoa(requestAid));

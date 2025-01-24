@@ -198,7 +198,6 @@ extern void brakeOff();
 extern void magnetOn();
 extern void magnetOff();
 
-extern void motorStop();
 
 /* RELAY CONTROL *** END ***************************************************************************/
 
@@ -214,15 +213,16 @@ extern void motorStop();
 #define MOT_SERVICE_CORE 0 // Which processor core onwhich to run the stepper service 
 
 #define MOT_REVOVERY_STEPS -16000 // 48.0"
-#define MOT_DIAG_ONE_DEG 2000  // ~ 6.0" 
+#define MOT_DIAG_JOG_STEPS 2000  // ~ 6.0" 
 #define MOT_STEP_PER_REV 2000
 
 
 extern Error* motorSetPositionAsZero();
 extern Error* motorGetPosition();
 extern Error* motorSetSpeed(uint32_t stepsPerSec);
-extern Error* motorSetCourse(int32_t steps);
+extern void motorSetCourse(int32_t steps);
 extern bool motorTargetReached();
+extern void motorStop();
 
 /* MOTOR CONTROL *** END *************************************************************************/
 
