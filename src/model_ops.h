@@ -92,7 +92,7 @@ public:
 
         bool req_aid = false,
         bool wnt_aid = false,
-        bool reo = false,
+        bool reo = true,
 
         bool go_home = false,
         bool sk_hmr = false,

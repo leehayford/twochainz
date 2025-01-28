@@ -10,7 +10,7 @@ ITRPin itrpFist(PIN_ITR_FIST, &g_state.fistLimit, ITR_PIN_ACTIVE_LOW);
 ITRPin itrpAnvil(PIN_ITR_ANVIL, &g_state.anvilLimit, ITR_PIN_ACTIVE_LOW);
 ITRPin itrpHome(PIN_ITR_HOME, &g_state.homeLimit, ITR_PIN_ACTIVE_LOW);
 ITRPin itrpTop(PIN_ITR_TOP, &g_state.topLimit, ITR_PIN_ACTIVE_LOW);
-ITRPin itrpPressure(PIN_ITR_PRESSURE, &g_state.pressure, ITR_PIN_ACTIVE_LOW);
+ITRPin itrpPressure(PIN_ITR_PRESSURE, &g_state.pressure, ITR_PIN_ACTIVE_HIGH);
 
 static void itrDebounce(ITRPin *itrp) {
     if( itrp->checkTime == 0 )                                  /* This is a new event */
@@ -111,13 +111,14 @@ Alert* motorGetPosition() {
         ((float)g_state.motorSteps / MOT_STEP_PER_REV) 
         * FIST_INCH_PER_REV;
 
-    if( !g_ops.diagnosticMode                               /* We're not currently diagnosing something */
-    &&  (   g_state.motorSteps < 0                          /* We're lost */
-        ||  g_state.motorSteps > FIST_HEIGHT_MAX_STEP       /* We're lost */
-        )
-    )  { 
-        return &ALERT_MOT_POS_FIX_LOST;                     // Tell everyone we're lost 
-    }
+    // if( !g_ops.diagnosticMode                               /* We're not currently diagnosing something */
+    // &&  (   g_state.motorSteps < -3                          /* We're lost */
+    //     ||  g_state.motorSteps > FIST_HEIGHT_MAX_STEP       /* We're lost */
+    //     )
+    // )  { 
+
+    //     return &ALERT_MOT_POS_FIX_LOST;                     // Tell everyone we're lost 
+    // }
     return nullptr;
 }
 
@@ -157,7 +158,8 @@ void motorSetCourse(int32_t steps) {
 }
 
 void motorStop() { 
-    motorSetCourse(0); 
+    // motorSetCourse(0); 
+    m_motor.emergencyStop();
 }
 
 bool motorTargetReached() { 

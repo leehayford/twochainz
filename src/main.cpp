@@ -26,12 +26,14 @@ void setup() {
 
     setupOps();
 
+    serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
 }
 
 void loop() {
 
     Alert* alert = nullptr;
 
+    // if( !g_ops.goHome )
     serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
     
     if( g_ops.diagnosticMode

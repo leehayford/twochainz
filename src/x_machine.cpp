@@ -144,10 +144,10 @@ void loadRecoveryCourseAndSeed() {
 }
 
 void loadHomeCourseAndSeed() {
-    g_ops.stepTarget = g_state.motorSteps * -1; // We set our course for home (DOWN)
+    g_ops.stepTarget = (g_state.motorSteps + 33) * -1; // We set our course for home (DOWN)
 
     if( g_ops.seekHome                          /* We are mere thousandths of an inch from home; take it easy */
-    )   g_ops.stepHz = MOT_STEPS_PER_SEC_LOW;   // We will proceed at SLOW rip    
+    )   g_ops.stepHz = MOT_STEPS_PER_SEC_HIGH;   // We will proceed at SLOW rip    
     
     else
         g_ops.stepHz = MOT_STEPS_PER_SEC_HIGH;  // We will proceed at FULL RIP!
@@ -428,6 +428,8 @@ Alert* doGoHome() {
         /* TODO: CHECK STEP ERROR */
         
         motorSetPositionAsZero();                   // Reset our home position
+        g_ops.seekHammer = false;
+        g_ops.seekAnvil = false;
         g_ops.goHome = false;                       // We stop going home, lest we look like fools!
         g_ops.reorient = false;                     // Clear the reorient flag (in case that's why we sought home)
         
@@ -448,8 +450,12 @@ Alert* doGoHome() {
             statusUpdate((char*)"DONE");
             return &ALERT_OPS_COMPLET;              // Flawless victory!
         }                         
-    }
-
+    } 
+    
+    Alert* alert = doPositionUpdate();      // All yearn for word of our travels
+    if( alert                               /* We are lost */
+    )   return alert;                       // We go no further...
+    
     if( !g_state.fistLimit                          /* We yearn for the hammer */
     )   return doSeekHammer();                              
 
@@ -480,7 +486,11 @@ Alert* doRaiseHammer() {
 
         return moveToTarget();                  // And we get to steppin'
     }
-
+    
+    Alert* alert = doPositionUpdate();      // All yearn for word of our travels
+    if( alert                               /* We are lost */
+    )   return alert;                       // We go no further...
+    
     if( motorTargetReached()                    /* We have raised the hammer */
     ) {
         g_ops.raiseHammer = false;              // We stop raising the hammer, lest we look like fools!
@@ -521,23 +531,32 @@ Alert* doDropHammer () {
         statusUpdate(STATUS_DROP_HAMMER);       // We drop the hammer 
         brakeOff();                             // With brake off
         magnetOff();                            // With fist open
-        startHammerTimeout();                   // We will yearn only so much because, self-respect
+        // startHammerTimeout();                   // We will yearn only so much because, self-respect
         g_ops.wantStrike = true;                // Until then, we yearn for the hammer strike
     }
 
-    if( !m_bHammerTimeout
-    )   return nullptr;                         // Go no further until m_bHammerTimeout has passed
-   
-    /* The m_bHammerTimeout has passed! */
-    g_ops.dropHammer = false;                   // We have taken every step in our attempt to drop the hammer
-    g_ops.wantStrike = false;                   // We stop yearning for the hammer strike, lest we look like fools!
-    // g_ops.wantBrakeOff = false;              // We stop yearning to release the brake, lest we look like fools!
+    else
+    if( g_state.anvilLimit
+    ) {
+        g_ops.dropHammer = false;                   // We have taken every step in our attempt to drop the hammer
+        g_ops.wantStrike = false;                   // We stop yearning for the hammer strike, lest we look like fools!
+        g_ops.cycleCount++;                         // Count it!
+        g_ops.goHome = true;                        // We must go home
+    }
 
-    if( !g_state.anvilLimit                     /* The hammer has failed to strike */
-    )   return &ALERT_HAMMERTIME_OUT;           // We feel shame and confusion
+    // if( !m_bHammerTimeout
+    // )   return nullptr;                         // Go no further until m_bHammerTimeout has passed
+   
+    // /* The m_bHammerTimeout has passed! */
+    // g_ops.dropHammer = false;                   // We have taken every step in our attempt to drop the hammer
+    // g_ops.wantStrike = false;                   // We stop yearning for the hammer strike, lest we look like fools!
+    // // g_ops.wantBrakeOff = false;              // We stop yearning to release the brake, lest we look like fools!
+
+    // if( !g_state.anvilLimit                     /* The hammer has failed to strike */
+    // )   return &ALERT_HAMMERTIME_OUT;           // We feel shame and confusion
          
-    g_ops.cycleCount++;                         // Count it!
-    g_ops.goHome = true;                        // We must go home
+    // g_ops.cycleCount++;                         // Count it!
+    // g_ops.goHome = true;                        // We must go home
     return nullptr;                             // Flawless victory!
 }
 
@@ -557,7 +576,8 @@ Alert* doPositionUpdate() {
     if( millis() > nextPosUpdate                /* The time has come to publish our position */    
     ) {
         Alert* alert = motorGetPosition();      // Check our position
-        if( alert                               /* we're lost */
+        if( alert                                               /* we're lost */
+        && !g_ops.reorient                          /* We didn't know we were lost */
         )   return alert;
 
         else {
@@ -606,13 +626,13 @@ Alert* runOperations() {
 
     // We have work to do and the freedome to do it
     
-    if( g_ops.goHome                            /* We are moving */
-    ||  g_ops.raiseHammer                       /* We are moving */
-    ) {
-        Alert* alert = doPositionUpdate();      // All yearn for word of our travels
-        if( alert                               /* We are lost */
-        )   return alert;                       // We go no further...
-    }  
+    // if( g_ops.goHome                            /* We are moving */
+    // ||  g_ops.raiseHammer                       /* We are moving */    
+    // ) {
+    //     Alert* alert = doPositionUpdate();      // All yearn for word of our travels
+    //     if( alert                               /* We are lost */
+    //     )   return alert;                       // We go no further...
+    // }  
 
     if( g_ops.goHome                            /* We've been called home */
     )   return doGoHome();                      // All yearn for our return
