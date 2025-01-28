@@ -4,7 +4,7 @@
 /* MQTT Pubclications *************************************************************************************/
 
 mqttPublication m_mqttPubs[N_PUBS] = {
-    {"error", 0, (mqttPubFunc)&mqttPublishError},
+    {"error", 0, (mqttPubFunc)&mqttPublishAlert},
     {"state", 0, (mqttPubFunc)&mqttPublishState},
     {"config", 0, (mqttPubFunc)&mqttPublishConfig},
 
@@ -12,11 +12,11 @@ mqttPublication m_mqttPubs[N_PUBS] = {
     {"ops/pos", 0, (mqttPubFunc)&mqttPublishOpsPosition},
 };
 
-void mqttPublishError(Error* err) { 
+void mqttPublishAlert(Alert* alert) { 
 
     char pTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
     mqttSIGBuilder(pTopic, m_mqttPubs[PUB_ERROR].topic);
-    publishMQTTMessage(pTopic, (char *)err->getJSON());
+    publishMQTTMessage(pTopic, (char *)alert->getJSON());
 }
 
 void mqttPublishState() { 
@@ -116,14 +116,14 @@ void mqttHandleCMDMoveDown(char* msg) {
 }
 void diagnosticMove(bool up) {
 
-    Error* err = nullptr;
-    err = motorSetSpeed(MOT_STEPS_PER_SEC_LOW);
-    if( err
-    )   mqttPublishError(err);
+    Alert* alert = nullptr;
+    alert = motorSetSpeed(MOT_STEPS_PER_SEC_LOW);
+    if( alert
+    )   mqttPublishAlert(alert);
 
-    err = motorGetPosition();         
-    if( err
-    )   mqttPublishError(err);
+    alert = motorGetPosition();         
+    if( alert
+    )   mqttPublishAlert(alert);
 
     // Serial.printf("\nCurrent position: %d\n", g_state.motorSteps);
     int32_t course = (up ? MOT_DIAG_JOG_STEPS : MOT_DIAG_JOG_STEPS * -1 );

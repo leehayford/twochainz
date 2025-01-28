@@ -1,5 +1,5 @@
-#ifndef DC_ERROR_H
-#define DC_ERROR_H
+#ifndef DC_ALERT_H
+#define DC_ALERT_H
 
 #include "dc_esp_server.h"
 #include "dc_json.h"
@@ -8,9 +8,9 @@ typedef enum {
     SUCCES = 1, // see utils.js ALERT_CODES
     WARNING, 
     ERROR
-} eErrCode_t;
+} eAlertCode_t;
 
-class Error {
+class Alert {
 private: 
     /* FOR JSON */
     const char* messageKey = "\"message\":";
@@ -19,15 +19,15 @@ private:
 
     /* Data */
     char* message;
-    eErrCode_t code;
+    eAlertCode_t code;
 
 public:
-    Error(const char* m, eErrCode_t c = ERROR) : 
+    Alert(const char* m, eAlertCode_t c = ERROR) : 
         message((char*)m), 
         code(c) 
     {}
 
-    eErrCode_t getCode() { return code; }
+    eAlertCode_t getCode() { return code; }
  
     char* getText() { return message; }
 
@@ -40,16 +40,16 @@ public:
     }
 };
 
-/* A bool and an Error* */
-typedef struct {bool bRes; Error* err;} sboolErr;
+/* A bool and an Alert* */
+typedef struct {bool bRes; Alert* err;} sboolAlert;
 
-/* A int32 and an Error* */
-typedef struct {int32_t ui32Res; Error* err;} si32Err;
+/* A int32 and an Alert* */
+typedef struct {int32_t ui32Res; Alert* err;} si32Alert;
 
-/* A uint32 and an Error* */
-typedef struct {uint32_t ui32Res; Error* err;} sui32Err;
+/* A uint32 and an Alert* */
+typedef struct {uint32_t ui32Res; Alert* err;} sui32Alert;
 
-/* A float and an Error* */
-typedef struct {float fRes; Error* err;} sfErr;
+/* A float and an Alert* */
+typedef struct {float fRes; Alert* err;} sfAlert;
 
-#endif /* DC_ERROR_H */
+#endif /* DC_ALERT_H */

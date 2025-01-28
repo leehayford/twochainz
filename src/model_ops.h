@@ -39,6 +39,8 @@ private:
 
     const char* raiseHammerKey = "\"raise_hammer\":";
     const char* dropHammerKey = "\"drop_hammer\":";
+    const char* wantBrakeOffKey = "\"want_brake_off\":";
+    const char* wantBrakeOnKey = "\"want_brake_on\":";
     const char* wantStrikeKey = "\"want_strike\":";
 
     const char* cycleCountKey = "\"cycle_count\":";
@@ -57,7 +59,9 @@ public:
     bool wantFistDown;
     bool wantConfig;
 
+    /* Cleared by Ops.doReorientation() */
     bool requestAid;
+    /* Cleared by Ops.doReorientation() */
     bool wantAid;
     bool reorient;
 
@@ -97,6 +101,8 @@ public:
         
         bool ras_hmr = false,
         bool drp_hmr = false,
+        bool wnt_brk_off = false,
+        bool wnt_brk_on = false,
         bool wnt_strk = false,
 
         int cyc_cnt = 0,
@@ -123,6 +129,8 @@ public:
 
         raiseHammer = ras_hmr;
         dropHammer = drp_hmr;
+        wantBrakeOff = wnt_brk_off;
+        wantBrakeOn = wnt_brk_on;
         wantStrike = wnt_strk;
 
         cycleCount = cyc_cnt;
@@ -180,6 +188,8 @@ public:
 
         jsonParseBool(jsonString, raiseHammerKey, raiseHammer);
         jsonParseBool(jsonString, dropHammerKey, dropHammer);
+        jsonParseBool(jsonString, wantBrakeOffKey, wantBrakeOff);
+        jsonParseBool(jsonString, wantBrakeOnKey, wantBrakeOn);
         jsonParseBool(jsonString, wantStrikeKey, wantStrike);
 
         jsonParseInt(jsonString, cycleCountKey, cycleCount);
@@ -210,6 +220,8 @@ public:
 
         jsonSerializeBool(jsonOut, raiseHammerKey, raiseHammer); 
         jsonSerializeBool(jsonOut, dropHammerKey, dropHammer);
+        jsonSerializeBool(jsonOut, wantBrakeOffKey, wantBrakeOff);
+        jsonSerializeBool(jsonOut, wantBrakeOnKey, wantBrakeOn);
         jsonSerializeBool(jsonOut, wantStrikeKey, wantStrike);
 
         jsonSerializeInt(jsonOut, cycleCountKey, cycleCount);
@@ -247,6 +259,8 @@ public:
         
         Serial.printf("Raise Hammer: %s\n", btoa(raiseHammer));
         Serial.printf("Drop Hammer: %s\n", btoa(dropHammer));
+        Serial.printf("Want Brake Off: %s\n", btoa(wantBrakeOff));
+        Serial.printf("Want Brake On: %s\n", btoa(wantBrakeOn));
         Serial.printf("Want Hammer Strike: %s\n", btoa(wantStrike));
 
         Serial.printf("Cycle Count: %d\n", cycleCount);

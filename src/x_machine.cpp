@@ -1,5 +1,15 @@
 #include "x_machine.h"
 
+void doOperationsAlert(Alert* alert) {
+    
+    if( alert->getCode() == ERROR) {        /* We have an ERROR alert */
+        motorStop();                        // We stop going places, to avoid making things worse
+        brakeOn();                          // We apply the brake
+        g_ops.wantAid = true;               // We take ownership of our need for help
+    }
+    mqttPublishAlert(alert);                // We tell all of our troubles
+}
+
 /* Interrupt Time stuff */
 hw_timer_t *tmrOpsITR = NULL;
 void IRAM_ATTR isrOpsITRTimer() {
@@ -34,89 +44,65 @@ void setUpOpsITRTimer() {
 
 
 /* Brake Timer stuff */
-hw_timer_t *tmrOpsBrake = NULL;
+// hw_timer_t *tmrOpsBrake = NULL;
 
-Error ERR_BRAKE_ON_PRESSURE_HIGH("failed to engage brake; high pressure fault");
-bool m_bBrakeOnTimeout = false;
-void startBrakeOnTimeout() {
-    tmrOpsBrake = timerBegin(
-        OPS_BRAKE_TIMER,
-        OPS_BRAKE_TIMER_PRESCALE,
-        OPS_BRAKE_TIMER_COUNT_UP
-    );
+// Alert ALERT_BRAKE_ON_PRESSURE_HIGH("failed to engage brake; high pressure fault");
+// bool m_bBrakeOnTimeout = false;
+// void startBrakeOnTimeout() {
+//     tmrOpsBrake = timerBegin(
+//         OPS_BRAKE_TIMER,
+//         OPS_BRAKE_TIMER_PRESCALE,
+//         OPS_BRAKE_TIMER_COUNT_UP
+//     );
 
-    timerAttachInterrupt(
-        tmrOpsBrake,
-        [](){ m_bBrakeOnTimeout = true; },
-        OPS_BRAKE_TIMER_EDGE
-    );
+//     timerAttachInterrupt(
+//         tmrOpsBrake,
+//         [](){ m_bBrakeOnTimeout = true; },
+//         OPS_BRAKE_TIMER_EDGE
+//     );
 
-    timerAlarmWrite(
-        tmrOpsBrake,
-        OPS_BRAKE_TIMER_ON_PERIOD_uSEC,
-        OPS_BRAKE_TIMER_RUN_ONCE
-    );
+//     timerAlarmWrite(
+//         tmrOpsBrake,
+//         OPS_BRAKE_TIMER_ON_PERIOD_uSEC,
+//         OPS_BRAKE_TIMER_RUN_ONCE
+//     );
 
-    m_bBrakeOnTimeout = false;
-    timerAlarmEnable(tmrOpsBrake);
-}
+//     m_bBrakeOnTimeout = false;
+//     timerAlarmEnable(tmrOpsBrake);
+// }
 
-Error ERR_BRAKE_OFF_PRESSURE_LOW("failed to release brake; low pressure fault");
-bool m_bBrakeOffTimeout = false;
-void startBrakeOffTimeout() {
-    tmrOpsBrake = timerBegin(
-        OPS_BRAKE_TIMER,
-        OPS_BRAKE_TIMER_PRESCALE,
-        OPS_BRAKE_TIMER_COUNT_UP
-    );
+// Alert ALERT_BRAKE_OFF_PRESSURE_LOW("failed to release brake; low pressure fault");
+// bool m_bBrakeOffTimeout = false;
+// void startBrakeOffTimeout() {
+//     tmrOpsBrake = timerBegin(
+//         OPS_BRAKE_TIMER,
+//         OPS_BRAKE_TIMER_PRESCALE,
+//         OPS_BRAKE_TIMER_COUNT_UP
+//     );
 
-    timerAttachInterrupt(
-        tmrOpsBrake,
-        [](){ m_bBrakeOffTimeout = true; },
-        OPS_BRAKE_TIMER_EDGE
-    );
+//     timerAttachInterrupt(
+//         tmrOpsBrake,
+//         [](){ m_bBrakeOffTimeout = true; },
+//         OPS_BRAKE_TIMER_EDGE
+//     );
 
-    timerAlarmWrite(
-        tmrOpsBrake,
-        OPS_BRAKE_TIMER_OFF_PERIOD_uSEC,
-        OPS_BRAKE_TIMER_RUN_ONCE
-    );
+//     timerAlarmWrite(
+//         tmrOpsBrake,
+//         OPS_BRAKE_TIMER_OFF_PERIOD_uSEC,
+//         OPS_BRAKE_TIMER_RUN_ONCE
+//     );
 
-    m_bBrakeOffTimeout = false;
-    timerAlarmEnable(tmrOpsBrake);
+//     m_bBrakeOffTimeout = false;
+//     timerAlarmEnable(tmrOpsBrake);
 
-}
+// }
 
 /* Hammertime stuff */
 hw_timer_t *tmrOpsHammer = NULL;
 
-Error ERR_HAMMERTIME_OUT("the hammer did not strike the anvil");
-// bool m_bHammertimeOutStrike = false; 
-// void startHammertimeOut() {
-//     tmrOpsHammer = timerBegin(
-//         OPS_HAMMER_TIMER,
-//         OPS_HAMMER_TIMER_PRESCALE,
-//         OPS_HAMMER_TIMER_COUNT_UP
-//     );
-
-//     timerAttachInterrupt(
-//         tmrOpsHammer,
-//         [](){ m_bHammertimeOutStrike = true; },
-//         OPS_HAMMER_TIMER_EDGE
-//     );
-
-//     timerAlarmWrite(
-//         tmrOpsHammer,
-//         OPS_HAMMER_TIMER_STRIKE_PERIOD_uSEC,
-//         OPS_HAMMER_TIMER_RUN_ONCE
-//     );
-    
-//     m_bHammertimeOutStrike = false;               // Clear the flag
-//     timerAlarmEnable(tmrOpsHammer);        // Hammertime is upon us
-// }
-
-bool m_bHammetimeOutCatch = false;
-void startHammerCatchTimer() {
+Alert ALERT_HAMMERTIME_OUT("the hammer did not strike the anvil");
+bool m_bHammerTimeout = false; 
+void startHammerTimeout() {
     tmrOpsHammer = timerBegin(
         OPS_HAMMER_TIMER,
         OPS_HAMMER_TIMER_PRESCALE,
@@ -125,29 +111,23 @@ void startHammerCatchTimer() {
 
     timerAttachInterrupt(
         tmrOpsHammer,
-        [](){ 
-            m_bHammetimeOutCatch = true; 
-            startBrakeOnTimeout();
-            brakeOn();
-        },
+        [](){ m_bHammerTimeout = true; },
         OPS_HAMMER_TIMER_EDGE
     );
 
     timerAlarmWrite(
         tmrOpsHammer,
-        OPS_HAMMER_TIMER_CATCH_PERIOD_uSEC,
+        OPS_HAMMER_TIMER_STRIKE_PERIOD_uSEC,
         OPS_HAMMER_TIMER_RUN_ONCE
     );
-
-    timerAlarmEnable(tmrOpsHammer);
+    
+    m_bHammerTimeout = false;               // Clear the flag
+    timerAlarmEnable(tmrOpsHammer);         // Hammertime is upon us
 }
 
+
 void setupOps() {
-
     setUpOpsITRTimer();
-
-    // startHammertimeOut();
-
 }
 
 void statusUpdate(const char* status_msg) {
@@ -181,15 +161,15 @@ void loadQuestCourseAndSpeed() {
     // Serial.printf("\nx_machine getQuestCourseAndSpeed:\tSTEPS: %d\tHz: %d\n", g_ops.stepTarget, g_ops.stepHz); 
 }
  
-Error* moveToTarget() {
+Alert* moveToTarget() {
    
     if( g_ops.reorient                          /* We are lost and being guided home */
     )   loadRecoveryCourseAndSeed();            // We will move as we are guided
 
     else {
-        Error* err = motorGetPosition();        // We take a bearing
-        if( err                                 /* We discover we are lost */
-        )   return err;                         // We will seek the guidance of a greater power 
+        Alert* alert = motorGetPosition();      // We take a bearing
+        if( alert                               /* We discover we are lost */
+        )   return alert;                       // We will seek the guidance of a greater power 
 
         /* We must assume we're on track */
                                                         
@@ -214,7 +194,7 @@ Error* moveToTarget() {
 
 /* OPERATIONS *****************************************************************************************/
 
-Error ERR_ESTOP("emergency stop has been initiated");
+Alert ALERT_ESTOP("emergency stop has been initiated");
 /* Called with every execution of runOperations() 
 When the EStop button is pressed:
 - Shut everything down
@@ -228,29 +208,22 @@ Returns true until EStop button is released */
 bool isEStopPressed() {
     
     if( g_state.eStop                           /* The emergency stop button is pressed */
+    &&  !g_ops.wantEStopRelease                 /* We were unaware of this pressedness */
     ) {
-        motorStop();                            // We stop moving
-        brakeOn();                              // We apply the brake
-
-        if( !g_ops.wantEStopRelease             /* We were unaware of this pressedness */
-        ) { 
-            mqttPublishError(&ERR_ESTOP);       // We expose this treachery!
-            statusUpdate(STATUS_ESTOP);         // We expose it ALL!
-        }
+        doOperationsAlert(&ALERT_ESTOP);        // We expose this treachery!
+        statusUpdate(STATUS_ESTOP);             // We expose it ALL!
         g_ops.wantEStopRelease = true;          // We yearn for release
     }
        
-    else                                        /* Release has been given */   
-    if( g_ops.wantEStopRelease                  /* Still we yearn for release */
-    ) {
-        g_ops.wantEStopRelease = false;         // We stop yearning for release, lest we look like perverts!
-        g_ops.wantAid = true;                   // We begin yearning for the aid of an operator
-    }
+    else                                          
+    if( !g_state.eStop                          /* Release has been given */ 
+    &&  g_ops.wantEStopRelease                  /* Still we yearn for release */
+    )   g_ops.wantEStopRelease = false;         // We stop yearning for release, lest we look like perverts!
 
     return g_ops.wantEStopRelease; 
 }
 
-Error ERR_DOOR_OPEN("door open; 2chainz has been violated");
+Alert ALERT_DOOR_OPEN("door open; 2chainz has been violated");
 /* Called with every execution of runOperations() 
 When the the door is opened:
 - Shut everything down
@@ -262,57 +235,42 @@ When the door is closed
 
 Returns true unti door is closed */
 bool isDoorOpen() {
-    
+
     if( g_state.doorOpen                        /* The door is open */
+    &&  !g_ops.wantDoorClose                    /* We were unaware of this violation */
     ) {
-        motorStop();                            // Stop moving
-        brakeOn();                              // Apply the brake
-
-        if( !g_ops.wantDoorClose                /* We were unaware of this openness */
-        ) { 
-            mqttPublishError(&ERR_DOOR_OPEN);   // We expose this treachery!
-            statusUpdate(STATUS_DOOR_OPEN);     // We expose it ALL!
-        }
-
+        doOperationsAlert(&ALERT_DOOR_OPEN);    // We expose this treachery!
+        statusUpdate(STATUS_DOOR_OPEN);         // We expose it ALL!
         g_ops.wantDoorClose = true;             // We yearn for closure
     } 
-    
-    else                                        /* The door is closed */  
-    if( g_ops.wantDoorClose                     /* Still we yearn for closure */
-    ) {
-        g_ops.wantDoorClose = false;            // We stop yearning for closure, lest we appear incapable of emotional growth!
-        g_ops.wantAid = true;                   // We begin yearning for the aid of an operator        
-    }
+
+    else                                          
+    if( !g_state.doorOpen                       /* The door is closed */
+    &&  g_ops.wantDoorClose                     /* Still we yearn for closure */
+    )   g_ops.wantDoorClose = false;            // We stop yearning for closure, lest we appear incapable of emotional growth!
 
     return g_ops.wantDoorClose;
 }
 
-Error ERR_TOP_LIMIT("top limit fault; 2chainz is way too high right now");
+Alert ALERT_TOP_LIMIT("top limit fault; 2chainz is way too high right now");
 /* Called with every execution of runOperations() 
 Returns true while the fist is too high */
 bool isTopLimitFault() {
     
     if( g_state.topLimit                        /* We are way too high right now... Did somebody slip us something? */
+    &&  !g_ops.wantFistDown                     /* We were unaware of our highness */
     ) {
-        motorStop();                            // Stop moving
-        brakeOn();                              // Apply the brake
-
-        if( !g_ops.wantFistDown                 /* We were unaware of our highness */
-        ) { 
-            mqttPublishError(&ERR_TOP_LIMIT);   // We expose this treachery!
-            statusUpdate(STATUS_TOP_LIMIT);     // We expose it ALL!
-        }
+        doOperationsAlert(&ALERT_TOP_LIMIT);    // We expose this treachery!
+        statusUpdate(STATUS_TOP_LIMIT);         // We expose it ALL!
         g_ops.wantFistDown = true;              // We yearn to be less high
     }
     
-    else                                        /* We are like 'regular high' now */  
-    if( g_ops.wantFistDown                      /* Still we yearn to be less high */
-    ) {
-        g_ops.wantFistDown = false;             // We stop yearning for sobriety, lest we appear light-weiths!
-        g_ops.wantAid = true;                   // We begin yearning for the aid of an operator        
-    }
+    else                                          
+    if( !g_state.topLimit                       /* We are like 'regular high' now */
+    &&  g_ops.wantFistDown                      /* Still we yearn to be less high */
+    )   g_ops.wantFistDown = false;             // We stop yearning for sobriety, lest we appear light-weiths!
 
-    return false;
+    return g_ops.wantFistDown;
 }
 
 /* Called with every execution of runOperations() 
@@ -323,10 +281,9 @@ MQTT message received at:
 bool isAidRequired() {
 
     if( g_ops.wantAid                           /* Something bad happened, thus we yearn for aid */
+    &&  !g_ops.requestAid                       /* We have yet to call for aid */
     ) {
-        if( !g_ops.requestAid                   /* We have yet to call for aid */
-        )   statusUpdate(STATUS_REQUEST_HELP);  // We swallow our pride; no Chainz is an island; 2Chainz, doubly so...
-        
+        statusUpdate(STATUS_REQUEST_HELP);      // We swallow our pride; no Chainz is an island; 2Chainz, doubly so...
         g_ops.requestAid = true;                // We will not ask again; it was hard enough the first time...
     }
 
@@ -358,7 +315,7 @@ bool isConfigRequired() {
 /* Called by doGoHome()
 Sets g_ops.seekHammer = false once we secure the hammer 
 Returns an error if we fail to secure the hammer */
-Error* doSeekHammer() { 
+Alert* doSeekHammer() { 
 
     if( g_state.fistLimit                       /* We found the hammer */
     ) { 
@@ -387,7 +344,7 @@ Error* doSeekHammer() {
 /* Called by doGoHome()
 Sets g_ops.seekAnvil = false once we find the anvil 
 Returns an error if we fail to find the anvil */
-Error* doSeekAnvil() {
+Alert* doSeekAnvil() {
 
     if( g_state.anvilLimit                      /* We found the anvil */
     ) { 
@@ -415,7 +372,7 @@ Error* doSeekAnvil() {
 /* Called by doGoHome()  
 Sets g_ops.seekHome = false once we find home 
 Returns an error if we fail to find home*/
-Error* doSeekHome() {
+Alert* doSeekHome() {
         
     if( g_state.homeLimit                       /* We found home */
     ) {     
@@ -441,7 +398,7 @@ Error* doSeekHome() {
     return nullptr;
 }
 
-Error OPS_COMPLET("2chainz claims victory", SUCCES);
+Alert ALERT_OPS_COMPLET("2chainz claims victory", SUCCES);
 /* Called by runOperations() when: 
 - the previous target was reached
 - and g_ops.goHome is set 
@@ -450,8 +407,8 @@ Secures the hammer and places it on the anvil
 Clears g_ops.goHome
 Clears g_ops.reorient 
 Sets g_ops.raiseHammer (if we have more cycles to complete)
-Returns an error if we fail to secure the hammer secure and place it on the anvil */
-Error* doGoHome() {
+Returns an alert if we fail to secure the hammer secure and place it on the anvil */
+Alert* doGoHome() {
     
     if( g_state.fistLimit
     &&  g_state.anvilLimit
@@ -480,7 +437,7 @@ Error* doGoHome() {
             brakeOn();                              // We feel a release of pressure
             magnetOff();                            // We let the hammer rest
             statusUpdate((char*)"DONE");
-            return &OPS_COMPLET;                    // Flawless victory!
+            return &ALERT_OPS_COMPLET;              // Flawless victory!
         }                         
     }
 
@@ -504,7 +461,7 @@ Error* doGoHome() {
 Raises the hammer to 'The Height of Configuration'
 Clears g_ops.raiseHammer
 Sets g_ops.dropHammer */
-Error* doRaiseHammer() {
+Alert* doRaiseHammer() {
 
     if( g_state.motorSteps == 0                 /* We languish at home as glory beckons */             
     ) {    
@@ -533,63 +490,43 @@ Clears hammertimeOut flag
 Enables tmrHammerStrike 
 Sets g_ops.wantStrike 
 Returns an error if the time runs out */
-Error* doDropHammer () {
+Alert* doDropHammer () {
 
-    /* */
-    if( !g_ops.wantBrakeOff
-    ) {
-        g_ops.wantBrakeOff = true;
-        startBrakeOffTimeout();
-    }
     
-    if( !m_bBrakeOffTimeout
-    )   return nullptr;                         // Go no further until the brake off time has passed
+    // if( !g_ops.wantBrakeOff                     /* We have yet to earn for release... of the brake */
+    // ) {
+    //     startBrakeOffTimeout();                 // We will yearn only so much because, self-respect
+    //     g_ops.wantBrakeOff = true;              // Until then, we yearn for release... of the brake
+    // }
+    
+    // if( !m_bBrakeOffTimeout
+    // )   return nullptr;                         // Go no further until m_bBrakeOffTimeout has passed
    
-    if( !g_state.pressure                       // We have no brake pressure
-    )   return &ERR_BRAKE_OFF_PRESSURE_LOW;     // We will fail to drop the hammer! ABORT!
-
+    // /* The m_bBrakeOffTimeout has passed! */
+    // if( !g_state.pressure                       /* We have no brake pressure */
+    // )   return &ALERT_BRAKE_OFF_PRESSURE_LOW;   // We will fail to drop the hammer! ABORT!
+    
     /* The brake is off */
-
     if( !g_ops.wantStrike                       /* We have yet to drop the hammer */
     ) { 
-        m_ui32HammerDropTime =                  // We want to know what is hammer time
-            millis() + HAMMER_STRIKE_mSEC;
-
         statusUpdate(STATUS_DROP_HAMMER);       // We drop the hammer 
+        brakeOff();                             // With brake off
         magnetOff();                            // With fist open
-        startHammerCatchTimer();                // And prepare to catch it
-
-        g_ops.wantStrike = true;                /* And we yearn for the strike of the hammer */
+        startHammerTimeout();                   // We will yearn only so much because, self-respect
+        g_ops.wantStrike = true;                // Until then, we yearn for the hammer strike
     }
 
-    if( !m_bBrakeOnTimeout
-    )   return nullptr;                         // Go no further until the brake on time has passed
-
-    if( g_state.pressure                        /* We have pressure when we should have none */
-    ) {  
-        g_ops.wantAid = true;                   // We yearn for aid
-        return &ERR_BRAKE_ON_PRESSURE_HIGH;     // We yearn for specific aid
-    }
-
-    if( millis() < m_ui32HammerDropTime         /* There is still time */
-    )   return nullptr;                         // We yearn for the hammer strike 
-
-    /* Time has run out */
- 
-    g_ops.wantBrakeOff = false;                 // We stop yearning to release the brake
-    m_bBrakeOffTimeout = false; 
-    
+    if( !m_bHammerTimeout
+    )   return nullptr;                         // Go no further until m_bHammerTimeout has passed
+   
+    /* The m_bHammerTimeout has passed! */
+    g_ops.dropHammer = false;                   // We have taken every step in our attempt to drop the hammer
     g_ops.wantStrike = false;                   // We stop yearning for the hammer strike, lest we look like fools!
-    // m_bHammertimeOutStrike = false;
-    
-    g_ops.dropHammer = false;                   // We have already answered this challenge 
+    // g_ops.wantBrakeOff = false;              // We stop yearning to release the brake, lest we look like fools!
 
     if( !g_state.anvilLimit                     /* The hammer has failed to strike */
-    ) {                                      
-       g_ops.wantAid = true;                    // We yearn for aid
-       return &ERR_HAMMERTIME_OUT;              // We feel shame and confusion
-    }
-     
+    )   return &ALERT_HAMMERTIME_OUT;           // We feel shame and confusion
+         
     g_ops.cycleCount++;                         // Count it!
     g_ops.goHome = true;                        // We must go home
     return nullptr;                             // Flawless victory!
@@ -597,21 +534,29 @@ Error* doDropHammer () {
 
 
 int32_t nextPosUpdate = 0;
+void schedulePositionUpdate() {
+    nextPosUpdate = millis() + POS_UPDATE_PERIOD_mSec; 
+}
 /* Called by runOperations() when: 
 - position != taget
 
 If position update period has passed:
 - sends current position 
 - schedules the next update */
-void doPositionUpdate() {  
+Alert* doPositionUpdate() {  
 
     if( millis() > nextPosUpdate                /* The time has come to publish our position */    
     ) {
-        motorGetPosition();                     // Check our position
-        setMQTTPubFlag(PUB_OPS_POS);            // Sing it
-        nextPosUpdate =                         // Schedule the next update
-            millis() + POS_UPDATE_PERIOD_mSec;    
+        Alert* alert = motorGetPosition();      // Check our position
+        if( alert                               /* we're lost */
+        )   return alert;
+
+        else {
+            setMQTTPubFlag(PUB_OPS_POS);        // Sing it
+            schedulePositionUpdate();           // Schedule the next update 
+        } 
     }
+    return nullptr;
 }
 
 /* Called by main loop() 
@@ -633,13 +578,16 @@ Passes along any error returned by:
 Disables motor when target is reached
 
 Periodically publishes position if fist is in motion */
-Error* runOperations() {
+Alert* runOperations() {
 
     if( isEStopPressed()                        /* We yearn for the system to be enabled */
     )   return nullptr;                         // We go no further...  
     
     if( isDoorOpen()                            /* We yearn for the door to close */
     )   return nullptr;                         // We go no further... 
+
+    if( isTopLimitFault()                       /* We yearn to be less high... of fist */
+    )   return nullptr;                         // We go no further...
 
     if( isAidRequired()                         /* We yearn for assistance */
     )   return nullptr;                         // We go no further... 
@@ -648,12 +596,14 @@ Error* runOperations() {
     )   return nullptr;                         // We go no further...  
 
     // We have work to do and the freedome to do it
-
+    
     if( g_ops.goHome                            /* We are moving */
     ||  g_ops.raiseHammer                       /* We are moving */
-    )   doPositionUpdate();                     // All yearn for word of our travels
-    else
-        motorStop();                            // Stop going
+    ) {
+        Alert* alert = doPositionUpdate();      // All yearn for word of our travels
+        if( alert                               /* We are lost */
+        )   return alert;                       // We go no further...
+    }  
 
     if( g_ops.goHome                            /* We've been called home */
     )   return doGoHome();                      // All yearn for our return

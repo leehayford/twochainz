@@ -2,7 +2,7 @@
 #define X_IO_H
 
 #include <ESP_FlexyStepper.h>
-#include "dc_error.h"
+#include "dc_alert.h"
 #include "x_models.h"
 
 /* INTERRUPTS *****************************************************************************************/
@@ -217,9 +217,9 @@ extern void magnetOff();
 #define MOT_STEP_PER_REV 2000
 
 
-extern Error* motorSetPositionAsZero();
-extern Error* motorGetPosition();
-extern Error* motorSetSpeed(uint32_t stepsPerSec);
+extern Alert* motorSetPositionAsZero();
+extern Alert* motorGetPosition();
+extern Alert* motorSetSpeed(uint32_t stepsPerSec);
 extern void motorSetCourse(int32_t steps);
 extern bool motorTargetReached();
 extern void motorStop();

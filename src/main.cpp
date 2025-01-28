@@ -1,7 +1,8 @@
 #include <Arduino.h>
 #include "dc_secret.h" // not included in git repo; contains 'SECRET_XXXXXXX' values
 #include "dc_esp_server.h"
-#include "dc_error.h"
+// #include "dc_error.h"
+#include "dc_alert.h"
 
 #include "x_models.h"
 #include "x_io.h"
@@ -30,26 +31,27 @@ void setup() {
 
 void loop() {
 
-    Error* err = nullptr;
+    Alert* alert = nullptr;
 
     serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
     
-    if( !g_ops.diagnosticMode
-    ) {
-        err = runOperations();
-        if( err
-        )   mqttPublishError(err);
-    } 
     
-    else     
-    if( !motorTargetReached() 
+    if( g_ops.diagnosticMode
+    &&  !motorTargetReached() 
     ) {
-        err = motorGetPosition(); 
-        if( err
-        )   mqttPublishError(err);
-                     
-        setMQTTPubFlag(PUB_OPS_POS);
+        alert = doPositionUpdate(); 
+        if( alert
+        ) {
+            mqttPublishAlert(alert);            /* Even though we're lost, we aren't stopping */
+            setMQTTPubFlag(PUB_OPS_POS);        // Sing it
+            schedulePositionUpdate();           // Schedule the next update 
+        }             
     }
-    
+
+    else {
+        alert = runOperations();
+        if( alert
+        ) doOperationsAlert(alert);  
+    } 
 
 }
