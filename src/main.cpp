@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include "dc_secret.h" // not included in git repo; contains 'SECRET_XXXXXXX' values
 #include "dc_esp_server.h"
-// #include "dc_error.h"
 #include "dc_alert.h"
 
 #include "x_models.h"
@@ -34,7 +33,6 @@ void loop() {
     Alert* alert = nullptr;
 
     serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
-    
     
     if( g_ops.diagnosticMode
     &&  !motorTargetReached() 

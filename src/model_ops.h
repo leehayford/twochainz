@@ -145,10 +145,20 @@ public:
         Serial.printf("\ng_ops.setStatus( %s )\n", status);
     }
 
+    void reassesOpStatus() {
+        wantEStopRelease = false;
+        wantDoorClose = false;
+        wantFistDown = false;
+        requestAid = false;
+        wantConfig = false;
+    }
+
     void doReorientation() {
         wantAid = false;                        // We stop yearning for aid, lest we look like fools!
         requestAid = false;                     // We stop requesting aid, lest we look like fools!
         
+        reassesOpStatus();
+
         // These flags are cleared in the doGoHome function
         reorient = true;                        // We embark on a journey of self discovery
         goHome = true;                          // Spoiler alert: such journies nearly always lead us home
@@ -164,7 +174,7 @@ public:
         doReorientation();
     }
 
-    void cmdContinue() {
+    void cmdContinue() { // Serial.printf("Ops.cmdContinue() :\n");
         doReorientation();
     }
 

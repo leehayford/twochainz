@@ -125,7 +125,7 @@ void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* sub
     while (!m_mqttClient.connected()) {
         Serial.print("Attempting MQTT connection...");
 
-        if (m_mqttClient.connect("DOIT-ESP32-DKV1-PIO-1", user, pw)) {
+        if (m_mqttClient.connect(SECRET_MQTT_CLIENT, user, pw)) {
             Serial.println("MQTT conneted");
             
             char fullTopic[50] = SECRET_MQTT_DEVICE;

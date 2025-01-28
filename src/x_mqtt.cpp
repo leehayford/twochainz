@@ -150,8 +150,8 @@ mqttSubscription m_mqttSubs[N_SUBS] = {
     {"config", (mqttCMDFunc)&mqttHandleCMDConfig},
 
     {"ops", (mqttCMDFunc)&mqttHandleCMDOps},
-    {"reset", (mqttCMDFunc)&mqttHandleCMDOpsReset},
-    {"continue", (mqttCMDFunc)&mqttHandleCMDOpsContinue},
+    {"ops/reset", (mqttCMDFunc)&mqttHandleCMDOpsReset},
+    {"ops/continue", (mqttCMDFunc)&mqttHandleCMDOpsContinue},
 
     {"diag/enable", (mqttCMDFunc)&mqttHandleCMDEnableDiagnostics},
     {"diag/disable", (mqttCMDFunc)&mqttHandleCMDDisableDiagnostics},

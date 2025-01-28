@@ -131,6 +131,7 @@ void setupOps() {
 }
 
 void statusUpdate(const char* status_msg) {
+    Serial.printf("\nstatusUpdate(%s)", status_msg);
     g_ops.setStatus(status_msg);
     setMQTTPubFlag(PUB_CONFIG);
     setMQTTPubFlag(PUB_STATE);
@@ -218,8 +219,10 @@ bool isEStopPressed() {
     else                                          
     if( !g_state.eStop                          /* Release has been given */ 
     &&  g_ops.wantEStopRelease                  /* Still we yearn for release */
-    )   g_ops.wantEStopRelease = false;         // We stop yearning for release, lest we look like perverts!
-
+    ) {  
+        g_ops.wantEStopRelease = false;         // We stop yearning for release, lest we look like perverts!
+        statusUpdate((char*)"...");
+    }
     return g_ops.wantEStopRelease; 
 }
 
@@ -247,8 +250,11 @@ bool isDoorOpen() {
     else                                          
     if( !g_state.doorOpen                       /* The door is closed */
     &&  g_ops.wantDoorClose                     /* Still we yearn for closure */
-    )   g_ops.wantDoorClose = false;            // We stop yearning for closure, lest we appear incapable of emotional growth!
-
+    ) {  
+        g_ops.wantDoorClose = false;            // We stop yearning for closure, lest we appear incapable of emotional growth!
+        statusUpdate((char*)"...");
+    }
+    
     return g_ops.wantDoorClose;
 }
 
@@ -268,8 +274,10 @@ bool isTopLimitFault() {
     else                                          
     if( !g_state.topLimit                       /* We are like 'regular high' now */
     &&  g_ops.wantFistDown                      /* Still we yearn to be less high */
-    )   g_ops.wantFistDown = false;             // We stop yearning for sobriety, lest we appear light-weiths!
-
+    ) { 
+        g_ops.wantFistDown = false;             // We stop yearning for sobriety, lest we appear light-weiths!
+        statusUpdate((char*)"...");
+    }
     return g_ops.wantFistDown;
 }
 
@@ -307,6 +315,7 @@ bool isConfigRequired() {
     ) {
         g_ops.wantConfig = false;               // We stop yearning for purpose, lest we appear ungrateful!
         g_ops.clearProgress();                  // To hell with all that has come before! Our singular concern is this moment, this quest. Onward! To glory! Or to ruin!  
+        statusUpdate((char*)"...");
     }
 
     return g_ops.wantConfig;
