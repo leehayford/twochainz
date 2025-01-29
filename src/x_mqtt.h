@@ -9,6 +9,7 @@
 
 typedef enum  {
     PUB_ERROR = 0,
+    PUB_ADMIN,
     PUB_STATE,
     PUB_CONFIG,
     PUB_OPS,
@@ -17,9 +18,11 @@ typedef enum  {
 
 extern void setMQTTPubFlag(eMqttPubMap_t pub);
 
-#define N_PUBS 5
+#define N_PUBS 6
 
 extern void mqttPublishAlert(Alert* alert);
+
+void mqttPublishAdmin();
 
 void mqttPublishState();
 
@@ -31,14 +34,22 @@ void mqttPublishOps();
 void mqttPublishOpsPosition();  
 
 
-#define N_SUBS 15
+#define N_SUBS 16
 
 /* Message IGNORED 
 Sets MQTT publish flags: 
-- Config 
+- Admin
+- Config (if Config.run)
 - State
 - Ops */
 void mqttHandleCMDReport(char* msg);
+
+/* Message PARSED --> Admin 
+Sets administrator level values
+Sets MQTT publish flag:
+- Admin
+*/
+void mqttHandleCMDAdmin(char* msg);
 
 /* Message IGNORED 
 Sets MQTT publish flag: State */

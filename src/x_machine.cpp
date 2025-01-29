@@ -1,5 +1,13 @@
 #include "x_machine.h"
 
+void writeAdminToFile() {
+    writeToFile("/adm.js", g_admin.serializeToJSON());
+}
+
+void readAdminFromFile() {
+    readFromFile("/adm.js");
+}
+
 void doOperationsAlert(Alert* alert) {
     
     if( alert->getCode() == ERROR) {        /* We have an ERROR alert */
@@ -10,77 +18,8 @@ void doOperationsAlert(Alert* alert) {
     mqttPublishAlert(alert);                // We tell all of our troubles
 }
 
-/* Interrupt Time stuff */
-hw_timer_t *tmrOpsITR = NULL;
-void IRAM_ATTR isrOpsITRTimer() {
-    if( g_ui32InterruptFlag                     /* We have had a state change */
-    ) {
-        setMQTTPubFlag(PUB_STATE);              // We tell all of our state change
-        g_ui32InterruptFlag = 0;                // We stop reacting to the state change, lest we look like fools!
-    }
-}
-void setUpOpsITRTimer() {
-
-    tmrOpsITR = timerBegin(
-        OPS_ITR_TIMER,
-        OPS_ITR_TIMER_PRESCALE,
-        OPS_ITR_TIMER_COUNT_UP
-    );
-
-    timerAttachInterrupt(
-        tmrOpsITR,
-        isrOpsITRTimer,
-        OPS_ITR_TIMER_EDGE
-    );
-
-    timerAlarmWrite(
-        tmrOpsITR,
-        OPS_ITR_TIMER_PERIOD_uSEC,
-        OPS_ITR_TIMER_AUTORUN
-    );
-
-    timerAlarmEnable(tmrOpsITR);
-}
-
-/* Hammertime stuff */
-hw_timer_t *tmrOpsHammer = NULL;
-
-Alert ALERT_HAMMERTIME_OUT("the hammer did not strike the anvil");
-bool m_bHammerTimeout = false; 
-void setupHammerTimer() {
-    tmrOpsHammer = timerBegin(
-        OPS_HAMMER_TIMER,
-        OPS_HAMMER_TIMER_PRESCALE,
-        OPS_HAMMER_TIMER_COUNT_UP
-    );
-
-    timerAttachInterrupt(
-        tmrOpsHammer,
-        [](){ m_bHammerTimeout = true; },
-        OPS_HAMMER_TIMER_EDGE
-    );
-
-    timerAlarmWrite(
-        tmrOpsHammer,
-        OPS_HAMMER_TIMER_STRIKE_PERIOD_uSEC,
-        OPS_HAMMER_TIMER_RUN_ONCE
-    );
-    
-}
-
-void startHammerTimer() {
-    m_bHammerTimeout = false;               // Clear the flag
-    timerRestart(tmrOpsHammer);             // Necessary for calls subsequent to the first call
-    timerAlarmEnable(tmrOpsHammer);         // Hammertime is upon us
-}
- 
-void setupOps() {
-    setUpOpsITRTimer();
-    setupHammerTimer();
-}
-
 void statusUpdate(const char* status_msg) {
-    Serial.printf("\nstatusUpdate(%s)", status_msg);
+    // Serial.printf("\nstatusUpdate(%s)", status_msg);
     g_ops.setStatus(status_msg);
     setMQTTPubFlag(PUB_CONFIG);
     setMQTTPubFlag(PUB_STATE);
@@ -88,23 +27,23 @@ void statusUpdate(const char* status_msg) {
 }
 
 void loadRecoveryCourseAndSeed() {
-    g_ops.stepTarget = MOT_REVOVERY_STEPS;      // We will attempt to do the full 48.0" (DOWN) and reassess
-    g_ops.stepHz = MOT_STEPS_PER_SEC_LOW;       // We will proceed at SLOW rip 
+    g_ops.stepTarget = g_admin.getRecoverySteps();  // We will attempt to do the full 48.0" (DOWN) and reassess
+    g_ops.stepHz = g_admin.motHzLow;                // We will proceed at SLOW rip 
 }
 
 void loadHomeCourseAndSeed() {
     g_ops.stepTarget = 
-        (g_state.motorSteps + MOT_GO_HOME_OVERSHOOT) 
-        * -1;                                   // We set our course for home (DOWN)
+        (g_state.motorSteps + g_admin.motStepsOver) 
+        * -1;                                       // We set our course for home (DOWN)
 
-    g_ops.stepHz = MOT_STEPS_PER_SEC_HIGH;      // We will proceed at FULL RIP!
+    g_ops.stepHz = g_admin.motHzHigh;               // We will proceed at FULL RIP!
 }
 
 void loadQuestCourseAndSpeed() {
     // We set our course for the height of configuration (UP)
-    g_ops.stepTarget = (g_config.height / FIST_INCH_PER_REV) * MOT_STEP_PER_REV;
+    g_ops.stepTarget = (g_config.height / g_admin.motInchRev) * g_admin.motStepsRev;
 
-    g_ops.stepHz = MOT_STEPS_PER_SEC_HIGH;      // We will proceed at FULL RIP!  
+    g_ops.stepHz = g_admin.motHzHigh;           // We will proceed at FULL RIP!  
     
     // Serial.printf("\nx_machine getQuestCourseAndSpeed:\tSTEPS: %d\tHz: %d\n", g_ops.stepTarget, g_ops.stepHz); 
 }
@@ -131,11 +70,11 @@ Alert* moveToTarget() {
 
     motorSetSpeed(g_ops.stepHz);
     motorSetCourse(g_ops.stepTarget);           // We get to steppin'
-    Serial.printf(
-        "\nx_machine moveToTarget:\tSTEPS: %d\tHz: %d\n", 
-        g_ops.stepTarget, 
-        g_ops.stepHz
-    ); 
+    // Serial.printf(
+    //     "\nx_machine moveToTarget:\tSTEPS: %d\tHz: %d\n", 
+    //     g_ops.stepTarget, 
+    //     g_ops.stepHz
+    // ); 
    
     return nullptr;
 }
@@ -278,7 +217,7 @@ Alert* doSeekHammer() {
         // Our search has ended.
         motorStop();                            // Stop moving while we secure the hammer 
         magnetOn();                             // Secure the hammer
-        delay(100);                             // Really get to know the hammer
+        delay(g_admin.opsMagDelay_mSec);        // Really get to know the hammer
         g_ops.seekHammer = false;               // Stop seeking the hammer, lest you look like a fool!
         return nullptr;                         // Take the hammer and leave this place! 
     }
@@ -287,7 +226,7 @@ Alert* doSeekHammer() {
     ) {
         // Our search begins!
         g_ops.seekHammer = true;                // We seek the hammer
-        magnetOff();                            // With fist open
+        magnetOn();                             // With fist ready
         brakeOn();                              // With brake on
         statusUpdate(STATUS_SEEK_HAMMER);       // Sing it
 
@@ -345,7 +284,7 @@ Alert* doSeekHome() {
         g_ops.seekHome = true;                  // We seek home
         magnetOn();                             // With fist closed
         brakeOff();                             // With brake off
-        motorSetSpeed(MOT_STEPS_PER_SEC_LOW);   // Sloyw daaaahyrn
+        motorSetSpeed(g_admin.motHzLow);        // Sloyw daaaahyrn
         statusUpdate(STATUS_SEEK_HOME);         // Sing it
 
         return moveToTarget();                  // We get to steppin'
@@ -447,7 +386,7 @@ Alert* doRaiseHammer() {
     return nullptr;
 }
 
-uint32_t m_ui32HammerDropTime = 0;
+Alert ALERT_HAMMERTIME_OUT("the hammer did not strike the anvil");
 /* Called by runOperations() when:
 - the previous target was reached
 - and g_ops.dropHammer is set 
@@ -468,7 +407,7 @@ Alert* doDropHammer () {
         g_ops.wantStrike = true;                // Until then, we yearn for the hammer strike
     }
 
-    if( !m_bHammerTimeout
+    if( !g_state.hammerTimeout
     )   return nullptr;                         // Go no further until m_bHammerTimeout has passed
    
     /* The m_bHammerTimeout has passed! */
@@ -487,7 +426,7 @@ Alert* doDropHammer () {
 
 int32_t nextPosUpdate = 0;
 void schedulePositionUpdate() {
-    nextPosUpdate = millis() + POS_UPDATE_PERIOD_mSec; 
+    nextPosUpdate = millis() + g_admin.opsPosPeriod_mSec; 
 }
 /* Called by runOperations() when: 
 - position != taget

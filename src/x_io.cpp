@@ -1,8 +1,9 @@
 #include "x_io.h"
- 
+
+
 /* INTERRUPTS *****************************************************************************************/
 
-uint32_t g_ui32InterruptFlag = 0;
+// uint32_t g_ui32InterruptFlag = 0;
 
 ITRPin itrpEStop(PIN_ITR_ESTOP, &g_state.eStop, ITR_PIN_ACTIVE_LOW);
 ITRPin itrpDoor(PIN_ITR_DOOR, &g_state.doorOpen, ITR_PIN_ACTIVE_HIGH);
@@ -12,19 +13,37 @@ ITRPin itrpHome(PIN_ITR_HOME, &g_state.homeLimit, ITR_PIN_ACTIVE_LOW);
 ITRPin itrpTop(PIN_ITR_TOP, &g_state.topLimit, ITR_PIN_ACTIVE_LOW);
 ITRPin itrpPressure(PIN_ITR_PRESSURE, &g_state.pressure, ITR_PIN_ACTIVE_HIGH);
 
-static void itrDebounce(ITRPin *itrp) {
+static void setITRPinDebounce(ITRPin *itrp) {
     if( itrp->checkTime == 0 )                                  /* This is a new event */
         itrp->checkTime = millis() + itrp->debouncePeriod;      // Set the debounce alarm time
 }
-void IRAM_ATTR isrEStop() { itrDebounce(&itrpEStop); }
-void IRAM_ATTR isrDoor() { itrDebounce(&itrpDoor); }
-void IRAM_ATTR isrFist() { itrDebounce(&itrpFist); }
-void IRAM_ATTR isrAnvil() { itrDebounce(&itrpAnvil); }
-void IRAM_ATTR isrHome() { itrDebounce(&itrpHome); }
-void IRAM_ATTR isrTop() { itrDebounce(&itrpTop); }
-void IRAM_ATTR isrPressure() { itrDebounce(&itrpPressure); }
+void IRAM_ATTR isrEStop() { setITRPinDebounce(&itrpEStop); }
+void IRAM_ATTR isrDoor() { setITRPinDebounce(&itrpDoor); }
+void IRAM_ATTR isrFist() { setITRPinDebounce(&itrpFist); }
+void IRAM_ATTR isrAnvil() { setITRPinDebounce(&itrpAnvil); }
+void IRAM_ATTR isrHome() { setITRPinDebounce(&itrpHome); }
+void IRAM_ATTR isrTop() { setITRPinDebounce(&itrpTop); }
+void IRAM_ATTR isrPressure() { setITRPinDebounce(&itrpPressure); }
 
 
+void setupInterrupts() {
+
+    itrpEStop.setupPin(isrEStop);
+    itrpDoor.setupPin(isrDoor);
+    itrpFist.setupPin(isrFist);
+    itrpAnvil.setupPin(isrAnvil);
+    itrpHome.setupPin(isrHome);
+    itrpTop.setupPin(isrTop);
+    itrpPressure.setupPin(isrPressure);
+
+}
+
+/* INTERRUPTS *** END ********************************************************************************/
+
+
+/* TIMERS *********************************************************************************************/
+
+/* INTERRUPT PIN DEBOUNCE CHECK TIMER */
 uint32_t m_ui32NowMillis;
 void IRAM_ATTR isrDebounceTimer() {;
 
@@ -40,39 +59,83 @@ void IRAM_ATTR isrDebounceTimer() {;
 
 }
 
-hw_timer_t *m_phwTimerDebounce = NULL; 
-void setupInterrupts() {
+hw_timer_t *tmrITRDebounce = NULL; 
+void setupITRDebounceTimer() {
 
-    itrpEStop.setupPin(isrEStop);
-    itrpDoor.setupPin(isrDoor);
-    itrpFist.setupPin(isrFist);
-    itrpAnvil.setupPin(isrAnvil);
-    itrpHome.setupPin(isrHome);
-    itrpTop.setupPin(isrTop);
-    itrpPressure.setupPin(isrPressure);
-
-    m_phwTimerDebounce = timerBegin(
+    tmrITRDebounce = timerBegin(
         ITR_DEBOUNCE_TIMER, 
-        ITR_DEBOUNCE_PRESCALE, 
-        ITR_DEBOUNCE_COUNT_UP
+        ITR_DEBOUNCE_TIMER_PRESCALE, 
+        ITR_DEBOUNCE_TIMER_COUNT_UP
     );
     
     timerAttachInterrupt(
-        m_phwTimerDebounce, 
+        tmrITRDebounce, 
         isrDebounceTimer, 
-        ITR_DEBOUNCE_EDGE 
+        ITR_DEBOUNCE_TIMER_EDGE 
     );
 
     timerAlarmWrite(
-        m_phwTimerDebounce, 
+        tmrITRDebounce, 
         ITR_DEBOUNCE_TIMER_PERIOD_uSEC, 
-        ITR_DEBOUNCE_AUTORUN
+        ITR_DEBOUNCE_TIMER_AUTORUN
     );
 
-    timerAlarmEnable(m_phwTimerDebounce);
+    timerAlarmEnable(tmrITRDebounce);
 }
 
-/* INTERRUPTS *** END ********************************************************************************/
+void changeITRDebounceTimerPeriod() {
+
+    timerAlarmWrite(
+        tmrITRDebounce, 
+        g_admin.ioTmrITRDeb_uSec, 
+        ITR_DEBOUNCE_TIMER_AUTORUN
+    );
+}
+
+/* Hammertime stuff */
+hw_timer_t *tmrHammerStrike = NULL;
+void setupHammerTimer() {
+    tmrHammerStrike = timerBegin(
+        OPS_HAMMER_TIMER,
+        OPS_HAMMER_TIMER_PRESCALE,
+        OPS_HAMMER_TIMER_COUNT_UP
+    );
+
+    timerAttachInterrupt(
+        tmrHammerStrike,
+        [](){ g_state.hammerTimeout = true; },
+        OPS_HAMMER_TIMER_EDGE
+    );
+
+    timerAlarmWrite(
+        tmrHammerStrike,
+        OPS_HAMMER_TIMER_STRIKE_PERIOD_uSEC,
+        OPS_HAMMER_TIMER_RUN_ONCE
+    );
+    
+}
+
+void startHammerTimer() {
+    g_state.hammerTimeout = false;          // Clear the flag
+    timerRestart(tmrHammerStrike);             // Necessary for calls subsequent to the first call
+    timerAlarmEnable(tmrHammerStrike);         // Hammertime is upon us
+}
+
+void changeHammerTimeroutPeriod() {
+    timerAlarmWrite(
+        tmrHammerStrike,
+        g_admin.opsTmrHammer_uSec,
+        OPS_HAMMER_TIMER_RUN_ONCE
+    );
+}
+
+void setupTimers() {
+    setupITRDebounceTimer();
+    setupHammerTimer();
+}
+
+/* TIMERS *** END *************************************************************************************/
+
 
 
 /* DIGITAL OUT **************************************************************************************/
@@ -108,8 +171,8 @@ Alert* motorGetPosition() {
     g_state.motorSteps = m_motor.getCurrentPositionInSteps();
 
     g_state.currentHeight = 
-        ((float)g_state.motorSteps / MOT_STEP_PER_REV) 
-        * FIST_INCH_PER_REV;
+        ((float)g_state.motorSteps / g_admin.motStepsRev) 
+        * g_admin.motInchRev;
 
     // if( !g_ops.diagnosticMode                               /* We're not currently diagnosing something */
     // &&  (   g_state.motorSteps < -3                          /* We're lost */
@@ -133,22 +196,22 @@ Alert* motorSetSpeed(uint32_t stepsPerSec) {
 
     Alert* warn = nullptr;
 
-    if( stepsPerSec > MOT_STEPS_PER_SEC_HIGH            /* We've been instructed poorly */
+    if( stepsPerSec > g_admin.motHzHigh                 /* We've been instructed poorly */
     ) { 
-        stepsPerSec = MOT_STEPS_PER_SEC_HIGH;           // We know better
-        warn = &ALERT_MOT_SPEED_TOO_HIGH;                  // We level a warning
+        stepsPerSec = g_admin.motHzHigh;                // We know better
+        warn = &ALERT_MOT_SPEED_TOO_HIGH;               // We level a warning
     }
 
     else 
     if( stepsPerSec < 1                                 /* We've been instructed poorly */
     ) { 
-        stepsPerSec = MOT_STEPS_PER_SEC_LOW;            // We know better
-        warn = &ALERT_MOT_SPEED_TOO_LOW;                   // We level a warning
+        stepsPerSec = g_admin.motHzLow;                 // We know better
+        warn = &ALERT_MOT_SPEED_TOO_LOW;                // We level a warning
     }
 
     m_motor.setSpeedInStepsPerSecond(stepsPerSec);
-    m_motor.setAccelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
-    m_motor.setDecelerationInStepsPerSecondPerSecond(MOT_STEPS_PER_SEC_ACCEL);
+    m_motor.setAccelerationInStepsPerSecondPerSecond(g_admin.motAccel);
+    m_motor.setDecelerationInStepsPerSecondPerSecond(g_admin.motDecel);
 
     return warn;
 }
@@ -192,6 +255,8 @@ void checkStateIOPins() {
 }
 
 void setupIO() {
+
+    setupTimers();
 
     setupInterrupts();
 

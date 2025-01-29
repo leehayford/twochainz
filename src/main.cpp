@@ -24,8 +24,8 @@ void setup() {
 
     setupIO();
 
-    setupOps();
-
+    writeAdminToFile();
+    readAdminFromFile();
 }
 
 
@@ -52,4 +52,5 @@ void loop() {
     } 
 
     serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
+
 }

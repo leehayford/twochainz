@@ -67,13 +67,7 @@ public:
     void debugPrintJSON() {
         Serial.printf("Config.debugPrintJSON() :\n%s\n\n", jsonOut);
     }
-    
-    void debugPrintValues() {
-        Serial.printf("Config.debugPrintValues() :\n");
-        Serial.printf("Run: %s\n", btoa(run));
-        Serial.printf("Cycles: %d\n", cycles);
-        Serial.printf("Height: %f\n\n", height);
-    }
+
 };
 
 #endif /* MODEL_CONFIG_H */

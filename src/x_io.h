@@ -5,6 +5,37 @@
 #include "dc_alert.h"
 #include "x_models.h"
 
+
+/* TIMERS *********************************************************************************************/
+
+#define ITR_DEBOUNCE_TIMER 0 // Timer 0
+#define ITR_DEBOUNCE_TIMER_PRESCALE 80 // Prescale of 80 = 1MHz for ESP32 DevKit V1
+#define ITR_DEBOUNCE_TIMER_EDGE true // No idea what this is; must be set true...
+#define ITR_DEBOUNCE_TIMER_AUTORUN true // set 'autoreload' true to run continuously
+#define ITR_DEBOUNCE_TIMER_RUN_ONCE false // set 'autoreload' false to run once
+#define ITR_DEBOUNCE_TIMER_COUNT_UP true // Timer counts up as opposed to down
+#define ITR_DEBOUNCE_TIMER_PERIOD_uSEC 2000
+extern void changeITRDebounceTimerPeriod();
+
+#define OPS_HAMMER_TIMER 1                          // Timer 1
+#define OPS_HAMMER_TIMER_PRESCALE 80                // Prescale of 80 = 1MHz for ESP32 DevKit V1
+#define OPS_HAMMER_TIMER_EDGE true                  // No idea what this is; must be set true...
+#define OPS_HAMMER_TIMER_AUTORUN true               // set 'autoreload' true to run continuously  
+#define OPS_HAMMER_TIMER_RUN_ONCE false             // set 'autoreload' false to run once
+#define OPS_HAMMER_TIMER_COUNT_UP true              // Timer counts up as opposed to down
+#define OPS_HAMMER_TIMER_STRIKE_PERIOD_uSEC 500000  // 0.5 seconds for hammer to drop
+extern void startHammerTimer();
+extern void changeHammerTimeroutPeriod();
+
+// #define OPS_BRAKE_TIMER 2                           // Timer 2
+// #define OPS_BRAKE_TIMER_PRESCALE 80                 // Prescale of 80 = 1MHz for ESP32 DevKit V1
+// #define OPS_BRAKE_TIMER_EDGE true                   // No idea what this is; must be set true...
+// #define OPS_BRAKE_TIMER_RUN_ONCE false              // set 'autoreload' false to run once
+// #define OPS_BRAKE_TIMER_COUNT_UP true               // Timer counts up as opposed to down
+// #define OPS_BRAKE_TIMER_ON_PERIOD_uSEC 300000       // 0.3 seconds for pressure to drop
+// #define OPS_BRAKE_TIMER_OFF_PERIOD_uSEC 1000000     // 1.0 seconds for pressure to build
+
+
 /* INTERRUPTS *****************************************************************************************/
 #define PIN_ITR_ESTOP 3                 // Interrupt -> Input Pullup -> Low = Emergency stop button pressed
 #define PIN_ITR_DOOR 21                 // Interrupt -> Input Pullup -> Low = Door is closed
@@ -16,18 +47,9 @@
 
 #define ITR_PIN_ACTIVE_LOW true
 #define ITR_PIN_ACTIVE_HIGH false
-
-/* INTERRUPT PINS -> DEBOUNCE */
 #define ITR_DEBOUNCE_PERIOD_mSEC 5
-#define ITR_DEBOUNCE_TIMER_PERIOD_uSEC 2000
-#define ITR_DEBOUNCE_TIMER 0 // Timer 0
-#define ITR_DEBOUNCE_PRESCALE 80 // Prescale of 80 = 1MHz for ESP32 DevKit V1
-#define ITR_DEBOUNCE_COUNT_UP true // Timer counts up as opposed to down
-#define ITR_DEBOUNCE_EDGE true // No idea what this is; must be set true...
-#define ITR_DEBOUNCE_AUTORUN true // set 'autoreload' true to run continuously
-#define ITR_DEBOUNCE_RUN_ONCE false // set 'autoreload' false to run once
 
-extern uint32_t g_ui32InterruptFlag;
+// extern uint32_t g_ui32InterruptFlag;
 
 #define ITR_PIN_COUNT 7
 typedef enum { 
@@ -104,7 +126,7 @@ public:
             checkPin();                         // What is the actual pin state?
 
             if( bPrevState != *pbPinState       /* The pin state changed */
-            )   g_ui32InterruptFlag = 1;        // Ring the bell!
+            )   g_state.interruptFlag = true;   //g_ui32InterruptFlag = 1;        // Ring the bell!
             
             checkTime = 0;                      // Reset the time / flag
         }
@@ -119,7 +141,6 @@ public:
 /* RELAY CONTROL *************************************************************************************/
 #define PIN_OUT_BRAKE 23                        // Relay Control -> Output -> Low = Brake is engaged
 #define PIN_OUT_MAGNET 22                       // Relay Control -> Output -> Low = Brake is engaged
-// #define PIN_OUT_MOT_EN 13                       // Motor Enable     -> Output -> LOW = Enabled
 #define PIN_OUT_MOT_DIR 12                      // Motor Direction  -> Output -> HIGH = ???
 #define PIN_OUT_MOT_STEP 14                     // Motor Move       -> Output -> One pulse per step
 
@@ -207,16 +228,7 @@ extern void magnetOff();
 
 #define MOT_DIR_UP HIGH
 #define MOT_DIR_DOWN LOW
-#define MOT_STEPS_PER_SEC_LOW 500
-#define MOT_STEPS_PER_SEC_HIGH 4000
-#define MOT_STEPS_PER_SEC_ACCEL 4000
 #define MOT_SERVICE_CORE 1 // Which processor core onwhich to run the stepper service 
-
-#define MOT_STEP_PER_REV 2000
-#define MOT_DIAG_JOG_STEPS 2000  // ~ 6.0"
-#define MOT_REVOVERY_STEPS -15583 // 46.75" 
-#define MOT_GO_HOME_OVERSHOOT 33
-
 
 extern Alert* motorSetPositionAsZero();
 extern Alert* motorGetPosition();

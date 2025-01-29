@@ -7,12 +7,25 @@ void setupFileSystem() {
         Serial.println("An error has occurred while mounting LittleFS");
         return;
     }
-    File file = LittleFS.open(FS_TEST_FILE);
+    File file = LittleFS.open(FS_TEST_FILE, FILE_WRITE, FS_CREATE);
+    if(!file){
+        Serial.println("Failed to open file for writing");
+        return;
+    }
+
+    if(file.print("Test file write & read")){
+        Serial.println("- file written");
+    } else {
+        Serial.println("- write failed");
+    }
+    file.close();
+
+
+    file = LittleFS.open(FS_TEST_FILE);
     if(!file){
         Serial.println("Failed to open file for reading");
         return;
     }
-
     Serial.println("FS Test File Content:");
     while(file.available()){
         Serial.write(file.read());
@@ -21,14 +34,43 @@ void setupFileSystem() {
     Serial.println();
 }
 
+void writeToFile(const char* fileName, const char* text) {
+
+    File file = LittleFS.open(fileName, FILE_WRITE, FS_CREATE);
+    if(!file){
+        Serial.println("Failed to open file for writing");
+        return;
+    }
+    
+    if(file.print(text)){
+        Serial.println("- file written");
+    } else {
+        Serial.println("- write failed");
+    }
+    file.close();
+}
+
+void readFromFile(const char* fileName) {
+    File file = LittleFS.open(fileName);
+    if(!file){
+        Serial.println("Failed to open file for reading");
+        return;
+    }
+
+    Serial.printf("\n%s Content:\n", fileName);
+    while(file.available()){
+        Serial.write(file.read());
+    }
+    file.close();
+}
 
 /* WIFI */
 void setupWiFi(const char* ssid, const char* password) {
-    Serial.print((String)"\nConnecting to " + ssid);
+    Serial.printf("\nConnecting to %s", ssid);
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
+        delay(2000);
         Serial.print(".");
     }
     Serial.printf("\nConnected..! Got IP: %s\n\n", WiFi.localIP().toString());

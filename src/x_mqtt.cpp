@@ -5,6 +5,7 @@
 
 mqttPublication m_mqttPubs[N_PUBS] = {
     {"error", 0, (mqttPubFunc)&mqttPublishAlert},
+    {"admin", 0, (mqttPubFunc)&mqttPublishAdmin},
     {"state", 0, (mqttPubFunc)&mqttPublishState},
     {"config", 0, (mqttPubFunc)&mqttPublishConfig},
 
@@ -17,6 +18,13 @@ void mqttPublishAlert(Alert* alert) {
     char pTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
     mqttSIGBuilder(pTopic, m_mqttPubs[PUB_ERROR].topic);
     publishMQTTMessage(pTopic, (char *)alert->getJSON());
+}
+
+void mqttPublishAdmin() {
+    
+    char pTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
+    mqttSIGBuilder(pTopic, m_mqttPubs[PUB_ADMIN].topic);
+    publishMQTTMessage(pTopic, (char *)g_admin.serializeToJSON());
 }
 
 void mqttPublishState() { 
@@ -117,7 +125,7 @@ void mqttHandleCMDMoveDown(char* msg) {
 void diagnosticMove(bool up) {
 
     Alert* alert = nullptr;
-    alert = motorSetSpeed(MOT_STEPS_PER_SEC_LOW);
+    alert = motorSetSpeed(g_admin.motHzLow);
     if( alert
     )   mqttPublishAlert(alert);
 
@@ -126,7 +134,7 @@ void diagnosticMove(bool up) {
     )   mqttPublishAlert(alert);
 
     // Serial.printf("\nCurrent position: %d\n", g_state.motorSteps);
-    int32_t course = (up ? MOT_DIAG_JOG_STEPS : MOT_DIAG_JOG_STEPS * -1 );
+    int32_t course = (up ? g_admin.diagSteps : g_admin.diagSteps * -1 );
     // Serial.printf("\nMoving: %d\n", course);
 
     motorSetCourse(course);
@@ -146,6 +154,7 @@ void mqttHandleCMDMotorStop(char* msg) {
 mqttSubscription m_mqttSubs[N_SUBS] = {
 
     {"report", (mqttCMDFunc)&mqttHandleCMDReport},
+    {"admin", (mqttCMDFunc)&mqttHandleCMDAdmin},
     {"state", (mqttCMDFunc)&mqttHandleCMDState},
     {"config", (mqttCMDFunc)&mqttHandleCMDConfig},
 
@@ -170,15 +179,27 @@ mqttSubscription m_mqttSubs[N_SUBS] = {
 
 
 void mqttHandleCMDReport(char* msg) {
+    setMQTTPubFlag(PUB_ADMIN);
     setMQTTPubFlag(PUB_CONFIG);
     setMQTTPubFlag(PUB_STATE);
     setMQTTPubFlag(PUB_OPS);
 }
 
+/* Admin */
+void mqttHandleCMDAdmin(char* msg) {
+    g_admin.parseFromJSON(msg);
+
+    changeHammerTimeroutPeriod();
+    changeITRDebounceTimerPeriod();
+    setMQTTPubFlag(PUB_ADMIN);
+}
+
+/* State */
 void mqttHandleCMDState(char* msg) { 
     setMQTTPubFlag(PUB_STATE);
 }
 
+/* Config */
 void mqttHandleCMDConfig(char* msg) {
     g_config.parseFromJSON(msg); 
     g_ops.clearProgress();
@@ -186,6 +207,7 @@ void mqttHandleCMDConfig(char* msg) {
     mqttHandleCMDReport(msg);
 }
 
+/* ops */
 void mqttHandleCMDOps(char* msg) {
     setMQTTPubFlag(PUB_OPS);
 }
@@ -204,13 +226,13 @@ void mqttHandleCMDOpsContinue(char* msg) {
 
 /* MQTT General Setup *************************************************************************************/
 void mqttCallBack_X(char* topic, byte* message, unsigned int length) {
-    Serial.printf("\nMessage arrived on topic: %s", topic);
+    // Serial.printf("\nMessage arrived on topic: %s", topic);
     for (mqttSubscription sub : m_mqttSubs) {
         
         char sTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
         mqttCMDBuilder(sTopic, sub.topic);
         if (strcmp(topic, sTopic) == 0) {
-            Serial.printf("\nSUB: %s\n", sTopic);
+            // Serial.printf("\nSUB: %s\n", sTopic);
             sub.func((char*) message);
             break;
         }
@@ -222,6 +244,13 @@ void setupMQTT_X(const char* mqttBrokerIP, int mqttBrokerPort) {
 }
 
 void serviceMQTTClient_X(const char* user, const char* pw) {
+    
+    if( g_state.interruptFlag //g_ui32InterruptFlag                     /* We have had a state change */
+    ) {
+        setMQTTPubFlag(PUB_STATE);              // We tell all of our state change
+        g_state.interruptFlag = false; //g_ui32InterruptFlag = 0;                // We stop reacting to the state change, lest we look like fools!
+    }
+
     serviceMQTTClient(user, pw, m_mqttSubs, N_SUBS);
     for (mqttPublication &pub : m_mqttPubs) {
         if ( pub.flag > 0 ) {

@@ -10,9 +10,11 @@
 #include "dc_secret.h"
 
 /* FILE SYSTEM */
+#define FS_CREATE true
 #define FS_TEST_FILE "/fs_test.txt"
 extern void setupFileSystem();
-
+extern void writeToFile(const char* fileName, const char* text);
+extern void readFromFile(const char* fileName);
 
 /* WIFI */
 extern void setupWiFi(const char* ssid, const char* password);

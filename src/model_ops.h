@@ -82,62 +82,34 @@ public:
 
     char status[JSON_FIELD_STRING_LENGTH];
 
-    Ops(
-        bool diag_mode = false,
+    Ops() {
+        diagnosticMode = false;
 
-        bool wnt_es = false,
-        bool wnt_dr = false,
-        bool wnt_fd = false,
-        bool wnt_cfg = false,
+        wantEStopRelease = false;
+        wantDoorClose = false;
+        wantFistDown = false;
+        wantConfig = false;
 
-        bool req_aid = false,
-        bool wnt_aid = false,
-        bool reo = true,
+        requestAid = false;
+        wantAid = false;
+        reorient = true;
 
-        bool go_home = false,
-        bool sk_hmr = false,
-        bool sk_anv = false,
-        bool sk_hom = false,
-        
-        bool ras_hmr = false,
-        bool drp_hmr = false,
-        bool wnt_brk_off = false,
-        bool wnt_brk_on = false,
-        bool wnt_strk = false,
+        goHome = true;
+        seekHammer = false;
+        seekAnvil = false;
+        seekHome = false;
 
-        int cyc_cnt = 0,
-        int stp_trg = 0,
-        int stp_hz = 0,
+        raiseHammer = false;
+        dropHammer = false;
+        wantBrakeOff = false;
+        wantBrakeOn = false;
+        wantStrike = false;
 
-        const char stat[JSON_FIELD_STRING_LENGTH]="initialized"
-    ) {
-        diagnosticMode = diag_mode;
+        cycleCount = 0;
+        stepTarget = 0;
+        stepHz = 0;
 
-        wantEStopRelease = wnt_es;
-        wantDoorClose = wnt_dr;
-        wantFistDown = wnt_fd;
-        wantConfig = wnt_cfg;
-
-        requestAid = req_aid;
-        wantAid = wnt_aid;
-        reorient = reo;
-
-        goHome = go_home;
-        seekHammer = sk_hmr;
-        seekAnvil = sk_anv;
-        seekHome = sk_hom;
-
-        raiseHammer = ras_hmr;
-        dropHammer = drp_hmr;
-        wantBrakeOff = wnt_brk_off;
-        wantBrakeOn = wnt_brk_on;
-        wantStrike = wnt_strk;
-
-        cycleCount = cyc_cnt;
-        stepTarget = stp_trg;
-        stepHz = stp_hz;
-
-        strcpy(status, stat);
+        setStatus("initialized");
     }
  
     void setStatus(const char stat[JSON_FIELD_STRING_LENGTH]) {
@@ -246,38 +218,6 @@ public:
     
     void debugPrintJSON() {
         Serial.printf("Ops.debugPrintJSON() :\n%s\n\n", jsonOut);
-    }
-
-    void debugPrintValues() {
-        Serial.printf("Ops.debugPrintValues() :\n");
-
-        Serial.printf("DIAGNOSTIC MODE: %s\n", btoa(diagnosticMode));
-
-        Serial.printf("Want EStop Release: %s\n", btoa(wantEStopRelease));
-        Serial.printf("Want Door Closed: %s\n", btoa(wantDoorClose));
-        Serial.printf("Want Fist Down: %s\n", btoa(wantFistDown));
-        Serial.printf("Want Configuration: %s\n", btoa(wantConfig));
-
-        Serial.printf("Request Aid: %s\n", btoa(requestAid));
-        Serial.printf("Want Aid: %s\n", btoa(wantAid));
-        Serial.printf("Reorient: %s\n", btoa(reorient));
-
-        Serial.printf("Go Home: %s\n", btoa(goHome));
-        Serial.printf("Seek Hammer: %s\n", btoa(seekHammer));
-        Serial.printf("Seek Anvil: %s\n", btoa(seekAnvil));
-        Serial.printf("Seek Home: %s\n", btoa(seekHome));
-        
-        Serial.printf("Raise Hammer: %s\n", btoa(raiseHammer));
-        Serial.printf("Drop Hammer: %s\n", btoa(dropHammer));
-        Serial.printf("Want Brake Off: %s\n", btoa(wantBrakeOff));
-        Serial.printf("Want Brake On: %s\n", btoa(wantBrakeOn));
-        Serial.printf("Want Hammer Strike: %s\n", btoa(wantStrike));
-
-        Serial.printf("Cycle Count: %d\n", cycleCount);
-        Serial.printf("Step Target: %d\n", stepTarget);
-        Serial.printf("Step Hz: %d\n", stepHz);
-
-        Serial.printf("Status: %s\n\n", status);
     }
 };
 
