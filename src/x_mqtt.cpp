@@ -165,6 +165,7 @@ mqttSubscription m_mqttSubs[N_SUBS] = {
     {"diag/move_up", (mqttCMDFunc)&mqttHandleCMDMoveUp},
     {"diag/move_down", (mqttCMDFunc)&mqttHandleCMDMoveDown},
     {"diag/motor_stop", (mqttCMDFunc)&mqttHandleCMDMotorStop},
+    
 };
 
 

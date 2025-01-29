@@ -42,67 +42,12 @@ void setUpOpsITRTimer() {
     timerAlarmEnable(tmrOpsITR);
 }
 
-
-/* Brake Timer stuff */
-// hw_timer_t *tmrOpsBrake = NULL;
-
-// Alert ALERT_BRAKE_ON_PRESSURE_HIGH("failed to engage brake; high pressure fault");
-// bool m_bBrakeOnTimeout = false;
-// void startBrakeOnTimeout() {
-//     tmrOpsBrake = timerBegin(
-//         OPS_BRAKE_TIMER,
-//         OPS_BRAKE_TIMER_PRESCALE,
-//         OPS_BRAKE_TIMER_COUNT_UP
-//     );
-
-//     timerAttachInterrupt(
-//         tmrOpsBrake,
-//         [](){ m_bBrakeOnTimeout = true; },
-//         OPS_BRAKE_TIMER_EDGE
-//     );
-
-//     timerAlarmWrite(
-//         tmrOpsBrake,
-//         OPS_BRAKE_TIMER_ON_PERIOD_uSEC,
-//         OPS_BRAKE_TIMER_RUN_ONCE
-//     );
-
-//     m_bBrakeOnTimeout = false;
-//     timerAlarmEnable(tmrOpsBrake);
-// }
-
-// Alert ALERT_BRAKE_OFF_PRESSURE_LOW("failed to release brake; low pressure fault");
-// bool m_bBrakeOffTimeout = false;
-// void startBrakeOffTimeout() {
-//     tmrOpsBrake = timerBegin(
-//         OPS_BRAKE_TIMER,
-//         OPS_BRAKE_TIMER_PRESCALE,
-//         OPS_BRAKE_TIMER_COUNT_UP
-//     );
-
-//     timerAttachInterrupt(
-//         tmrOpsBrake,
-//         [](){ m_bBrakeOffTimeout = true; },
-//         OPS_BRAKE_TIMER_EDGE
-//     );
-
-//     timerAlarmWrite(
-//         tmrOpsBrake,
-//         OPS_BRAKE_TIMER_OFF_PERIOD_uSEC,
-//         OPS_BRAKE_TIMER_RUN_ONCE
-//     );
-
-//     m_bBrakeOffTimeout = false;
-//     timerAlarmEnable(tmrOpsBrake);
-
-// }
-
 /* Hammertime stuff */
 hw_timer_t *tmrOpsHammer = NULL;
 
 Alert ALERT_HAMMERTIME_OUT("the hammer did not strike the anvil");
 bool m_bHammerTimeout = false; 
-void startHammerTimeout() {
+void setupHammerTimer() {
     tmrOpsHammer = timerBegin(
         OPS_HAMMER_TIMER,
         OPS_HAMMER_TIMER_PRESCALE,
@@ -121,13 +66,17 @@ void startHammerTimeout() {
         OPS_HAMMER_TIMER_RUN_ONCE
     );
     
-    m_bHammerTimeout = false;               // Clear the flag
-    timerAlarmEnable(tmrOpsHammer);         // Hammertime is upon us
 }
 
-
+void startHammerTimer() {
+    m_bHammerTimeout = false;               // Clear the flag
+    timerRestart(tmrOpsHammer);             // Necessary for calls subsequent to the first call
+    timerAlarmEnable(tmrOpsHammer);         // Hammertime is upon us
+}
+ 
 void setupOps() {
     setUpOpsITRTimer();
+    setupHammerTimer();
 }
 
 void statusUpdate(const char* status_msg) {
@@ -144,13 +93,11 @@ void loadRecoveryCourseAndSeed() {
 }
 
 void loadHomeCourseAndSeed() {
-    g_ops.stepTarget = (g_state.motorSteps + 33) * -1; // We set our course for home (DOWN)
+    g_ops.stepTarget = 
+        (g_state.motorSteps + MOT_GO_HOME_OVERSHOOT) 
+        * -1;                                   // We set our course for home (DOWN)
 
-    if( g_ops.seekHome                          /* We are mere thousandths of an inch from home; take it easy */
-    )   g_ops.stepHz = MOT_STEPS_PER_SEC_HIGH;   // We will proceed at SLOW rip    
-    
-    else
-        g_ops.stepHz = MOT_STEPS_PER_SEC_HIGH;  // We will proceed at FULL RIP!
+    g_ops.stepHz = MOT_STEPS_PER_SEC_HIGH;      // We will proceed at FULL RIP!
 }
 
 void loadQuestCourseAndSpeed() {
@@ -331,6 +278,7 @@ Alert* doSeekHammer() {
         // Our search has ended.
         motorStop();                            // Stop moving while we secure the hammer 
         magnetOn();                             // Secure the hammer
+        delay(100);                             // Really get to know the hammer
         g_ops.seekHammer = false;               // Stop seeking the hammer, lest you look like a fool!
         return nullptr;                         // Take the hammer and leave this place! 
     }
@@ -511,52 +459,28 @@ Sets g_ops.wantStrike
 Returns an error if the time runs out */
 Alert* doDropHammer () {
 
-    
-    // if( !g_ops.wantBrakeOff                     /* We have yet to earn for release... of the brake */
-    // ) {
-    //     startBrakeOffTimeout();                 // We will yearn only so much because, self-respect
-    //     g_ops.wantBrakeOff = true;              // Until then, we yearn for release... of the brake
-    // }
-    
-    // if( !m_bBrakeOffTimeout
-    // )   return nullptr;                         // Go no further until m_bBrakeOffTimeout has passed
-   
-    // /* The m_bBrakeOffTimeout has passed! */
-    // if( !g_state.pressure                       /* We have no brake pressure */
-    // )   return &ALERT_BRAKE_OFF_PRESSURE_LOW;   // We will fail to drop the hammer! ABORT!
-    
-    /* The brake is off */
     if( !g_ops.wantStrike                       /* We have yet to drop the hammer */
     ) { 
         statusUpdate(STATUS_DROP_HAMMER);       // We drop the hammer 
         brakeOff();                             // With brake off
         magnetOff();                            // With fist open
-        // startHammerTimeout();                   // We will yearn only so much because, self-respect
+        startHammerTimer();                   // We will yearn only for so long because, self-respect
         g_ops.wantStrike = true;                // Until then, we yearn for the hammer strike
     }
 
-    else
-    if( g_state.anvilLimit
-    ) {
-        g_ops.dropHammer = false;                   // We have taken every step in our attempt to drop the hammer
-        g_ops.wantStrike = false;                   // We stop yearning for the hammer strike, lest we look like fools!
-        g_ops.cycleCount++;                         // Count it!
-        g_ops.goHome = true;                        // We must go home
-    }
-
-    // if( !m_bHammerTimeout
-    // )   return nullptr;                         // Go no further until m_bHammerTimeout has passed
+    if( !m_bHammerTimeout
+    )   return nullptr;                         // Go no further until m_bHammerTimeout has passed
    
-    // /* The m_bHammerTimeout has passed! */
-    // g_ops.dropHammer = false;                   // We have taken every step in our attempt to drop the hammer
-    // g_ops.wantStrike = false;                   // We stop yearning for the hammer strike, lest we look like fools!
-    // // g_ops.wantBrakeOff = false;              // We stop yearning to release the brake, lest we look like fools!
-
-    // if( !g_state.anvilLimit                     /* The hammer has failed to strike */
-    // )   return &ALERT_HAMMERTIME_OUT;           // We feel shame and confusion
+    /* The m_bHammerTimeout has passed! */
+    g_ops.dropHammer = false;                   // We have taken every step in our attempt to drop the hammer
+    g_ops.wantStrike = false;                   // We stop yearning for the hammer strike, lest we look like fools!
+  
+    if( !g_state.anvilLimit                     /* The hammer has failed to strike */
+    )   return &ALERT_HAMMERTIME_OUT;           // We feel shame and confusion
          
-    // g_ops.cycleCount++;                         // Count it!
-    // g_ops.goHome = true;                        // We must go home
+    g_ops.cycleCount++;                         // Count it!
+    g_ops.goHome = true;                        // We must go home
+
     return nullptr;                             // Flawless victory!
 }
 

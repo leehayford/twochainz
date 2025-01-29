@@ -22,14 +22,15 @@
 #define OPS_HAMMER_TIMER 2                          // Timer 2
 #define OPS_HAMMER_TIMER_PRESCALE 80                // Prescale of 80 = 1MHz for ESP32 DevKit V1
 #define OPS_HAMMER_TIMER_EDGE true                  // No idea what this is; must be set true...
+#define OPS_HAMMER_TIMER_AUTORUN true               // set 'autoreload' true to run continuously  
 #define OPS_HAMMER_TIMER_RUN_ONCE false             // set 'autoreload' false to run once
 #define OPS_HAMMER_TIMER_COUNT_UP true              // Timer counts up as opposed to down
-#define OPS_HAMMER_TIMER_STRIKE_PERIOD_uSEC 1000000 // 1.0 seconds for hammer to drop
+#define OPS_HAMMER_TIMER_STRIKE_PERIOD_uSEC 500000  // 0.5 seconds for hammer to drop
 
 // #define OPS_BRAKE_TIMER 3                           // Timer 3
 // #define OPS_BRAKE_TIMER_PRESCALE 80                 // Prescale of 80 = 1MHz for ESP32 DevKit V1
 // #define OPS_BRAKE_TIMER_EDGE true                   // No idea what this is; must be set true...
-// #define OPS_BRAKE_TIMER_RUN_ONCE false             // set 'autoreload' false to run once
+// #define OPS_BRAKE_TIMER_RUN_ONCE false              // set 'autoreload' false to run once
 // #define OPS_BRAKE_TIMER_COUNT_UP true               // Timer counts up as opposed to down
 // #define OPS_BRAKE_TIMER_ON_PERIOD_uSEC 300000       // 0.3 seconds for pressure to drop
 // #define OPS_BRAKE_TIMER_OFF_PERIOD_uSEC 1000000     // 1.0 seconds for pressure to build

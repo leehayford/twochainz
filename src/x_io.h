@@ -212,9 +212,10 @@ extern void magnetOff();
 #define MOT_STEPS_PER_SEC_ACCEL 4000
 #define MOT_SERVICE_CORE 1 // Which processor core onwhich to run the stepper service 
 
-#define MOT_REVOVERY_STEPS -16000 // 48.0"
-#define MOT_DIAG_JOG_STEPS 2000  // ~ 6.0" 
 #define MOT_STEP_PER_REV 2000
+#define MOT_DIAG_JOG_STEPS 2000  // ~ 6.0"
+#define MOT_REVOVERY_STEPS -15583 // 46.75" 
+#define MOT_GO_HOME_OVERSHOOT 33
 
 
 extern Alert* motorSetPositionAsZero();
