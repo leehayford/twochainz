@@ -9,6 +9,7 @@
 #define ADMIN_MOT_REV_STEP 2000
 #define ADMIN_MOT_MAX_INCH 46.75
 #define ADMIN_MOT_MAX_INCH_OVER 0.5
+#define ADMIN_DEFAULT_FILE "/adm.js"
 
 class Admin {
 private:
@@ -100,6 +101,7 @@ public:
         diagSteps = getStepsFromInch(diagInch);   // 0.002 / 6.0 * 2000 = 4
     }
 
+    /* called during parseFromJSON(...) */
     float validateMaxInch(float inch) {
         if( inch > ADMIN_MOT_MAX_INCH
         )   inch = ADMIN_MOT_MAX_INCH;
@@ -110,6 +112,7 @@ public:
         return inch;
     }
 
+    /* called during parseFromJSON(...) */
     float validateInchOver(float inch) {
         if( inch > ADMIN_MOT_MAX_INCH_OVER
         )   inch = ADMIN_MOT_MAX_INCH_OVER;
@@ -120,6 +123,7 @@ public:
         return inch;
     }
 
+    /* called during parseFromJSON(...) */
     float validateDiagInch(float inch) {
         if( inch > ADMIN_MOT_MAX_INCH
         )   inch = ADMIN_MOT_MAX_INCH;
@@ -129,6 +133,11 @@ public:
 
         return inch;
     }
+    
+    /* called during 
+        - constructor...
+        - parseFromJSON(...)  
+        - getRecoverySteps() */
     int getStepsFromInch(float inch) { return inch / motInchRev * motStepsRev; }
 
     int getRecoverySteps() { return getStepsFromInch(motInchMax) * -1; }

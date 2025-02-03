@@ -13,8 +13,11 @@
 #define FS_CREATE true
 #define FS_TEST_FILE "/fs_test.txt"
 extern void setupFileSystem();
+extern bool fileExists(const char* fileName);
+extern void deleteFile(const char* fileName);
 extern void writeToFile(const char* fileName, const char* text);
-extern void readFromFile(const char* fileName);
+extern int getFileLength(const char* fileName);
+extern void readFromFile(char* data, const char* fileName);
 
 /* WIFI */
 extern void setupWiFi(const char* ssid, const char* password);

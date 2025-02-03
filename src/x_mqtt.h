@@ -34,7 +34,7 @@ void mqttPublishOps();
 void mqttPublishOpsPosition();  
 
 
-#define N_SUBS 16
+#define N_SUBS 19
 
 /* Message IGNORED 
 Sets MQTT publish flags: 
@@ -50,6 +50,22 @@ Sets MQTT publish flag:
 - Admin
 */
 void mqttHandleCMDAdmin(char* msg);
+
+/* Message PARSED --> Admin 
+Sets administrator level values
+Saves administrator level values to /adm.js
+Sets MQTT publish flag:
+- Admin
+*/
+void mqttHandleCMDAdminSetDefaults(char* msg);
+
+/* Message IGNORED 
+Reads administrator level values from /adm.js
+Sets administrator level values
+Sets MQTT publish flag:
+- Admin
+*/
+void mqttHandleCMDAdminGetDefaults(char* msg);
 
 /* Message IGNORED 
 Sets MQTT publish flag: State */

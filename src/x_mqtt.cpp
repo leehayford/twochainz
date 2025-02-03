@@ -155,6 +155,9 @@ mqttSubscription m_mqttSubs[N_SUBS] = {
 
     {"report", (mqttCMDFunc)&mqttHandleCMDReport},
     {"admin", (mqttCMDFunc)&mqttHandleCMDAdmin},
+    {"admin/set_def", (mqttCMDFunc)&mqttHandleCMDAdminSetDefaults},
+    {"admin/get_def", (mqttCMDFunc)&mqttHandleCMDAdminGetDefaults},
+    {"admin", (mqttCMDFunc)&mqttHandleCMDAdmin},
     {"state", (mqttCMDFunc)&mqttHandleCMDState},
     {"config", (mqttCMDFunc)&mqttHandleCMDConfig},
 
@@ -187,10 +190,15 @@ void mqttHandleCMDReport(char* msg) {
 
 /* Admin */
 void mqttHandleCMDAdmin(char* msg) {
-    g_admin.parseFromJSON(msg);
-
-    changeHammerTimeroutPeriod();
-    changeITRDebounceTimerPeriod();
+    validateAdminSettings(msg);
+    setMQTTPubFlag(PUB_ADMIN);
+}
+void mqttHandleCMDAdminSetDefaults(char* msg) {
+    validateAdminSettings(msg);
+    writeAdminSettingsToFile();
+}
+void mqttHandleCMDAdminGetDefaults(char* msg) {
+    readAdminSettingsFromFile();
     setMQTTPubFlag(PUB_ADMIN);
 }
 

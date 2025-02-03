@@ -114,7 +114,7 @@ public:
  
     void setStatus(const char stat[JSON_FIELD_STRING_LENGTH]) {
         strcpy(status, stat);
-        Serial.printf("\ng_ops.setStatus( %s )\n", status);
+        // Serial.printf("\ng_ops.setStatus( %s )\n", status);
     }
 
     void reassesOpStatus() {

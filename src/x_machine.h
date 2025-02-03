@@ -25,7 +25,4 @@ extern void schedulePositionUpdate();
 
 extern Alert* doPositionUpdate();
 
-extern void writeAdminToFile();
-extern void readAdminFromFile();
-
 #endif /* X_MACHINE_H */

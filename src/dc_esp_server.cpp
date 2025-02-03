@@ -13,10 +13,12 @@ void setupFileSystem() {
         return;
     }
 
-    if(file.print("Test file write & read")){
-        Serial.println("- file written");
+    Serial.printf("\n\nChecking file system...\n");
+
+    if(file.print("\tfile read OK\n")){
+        Serial.printf("\tfile write OK\n");
     } else {
-        Serial.println("- write failed");
+        Serial.printf("\twrite failed\n");
     }
     file.close();
 
@@ -26,7 +28,6 @@ void setupFileSystem() {
         Serial.println("Failed to open file for reading");
         return;
     }
-    Serial.println("FS Test File Content:");
     while(file.available()){
         Serial.write(file.read());
     }
@@ -34,11 +35,20 @@ void setupFileSystem() {
     Serial.println();
 }
 
+bool fileExists(const char* fileName) {
+    return LittleFS.exists(fileName);
+}
+
+void deleteFile(const char* fileName) {
+    if( fileExists(fileName)
+    )   LittleFS.remove(fileName);
+}
+
 void writeToFile(const char* fileName, const char* text) {
 
     File file = LittleFS.open(fileName, FILE_WRITE, FS_CREATE);
     if(!file){
-        Serial.println("Failed to open file for writing");
+        Serial.println("writeToFile() -> failed to open file for writing");
         return;
     }
     
@@ -50,17 +60,31 @@ void writeToFile(const char* fileName, const char* text) {
     file.close();
 }
 
-void readFromFile(const char* fileName) {
+int getFileLength(const char* fileName) {
+    File file = LittleFS.open(fileName);
+    int length = file.size() + 1;
+    file.close();
+    return length;
+}
+
+void readFromFile(char* data, const char* fileName) {
     File file = LittleFS.open(fileName);
     if(!file){
-        Serial.println("Failed to open file for reading");
+        Serial.println("readFromFile() -> failed to open file for reading");
         return;
     }
 
-    Serial.printf("\n%s Content:\n", fileName);
-    while(file.available()){
-        Serial.write(file.read());
-    }
+    // Serial.printf("\n%s Content:\n", fileName);
+    // int length = file.size() + 1;
+    // char buff[length] = "";
+    // file.read((uint8_t*)buff, length);
+    // Serial.printf("\nreadFromFile -> length: %d\n", length);
+    // Serial.printf("\nreadFromFile -> data: %s\n", buff);
+    // strcat(data, buff);
+
+
+    file.read((uint8_t*)data, file.size() + 1);
+
     file.close();
 }
 

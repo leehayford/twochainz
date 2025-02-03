@@ -1,5 +1,9 @@
 {
     "files.associations": {
+        ".env*": "dotenv",
+        "CURVEFIT.C": "cpp",
+        "CURVEFIT.H": "cpp",
+        "CALIBRAT.C": "cpp",
         "sstream": "cpp",
         "regex": "cpp",
         "*.tcc": "cpp",
@@ -12,6 +16,7 @@
         "functional": "cpp",
         "tuple": "cpp",
         "type_traits": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "string_view": "cpp"
     }
 }

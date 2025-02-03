@@ -1,12 +1,17 @@
 #include "x_machine.h"
 
-void writeAdminToFile() {
-    writeToFile("/adm.js", g_admin.serializeToJSON());
-}
+// void writeAdminToFile() {
+//     writeToFile("/adm.js", g_admin.serializeToJSON());
+// }
 
-void readAdminFromFile() {
-    readFromFile("/adm.js");
-}
+// void readAdminFromFile() {
+//     char data[MQTT_PUB_BUFFER_SIZE] = "";
+//     readFromFile(data, "/adm.js");
+//     Serial.printf("\nreadAdminFromFile -> data: %s\n", data);
+
+//     g_admin.parseFromJSON(data);
+//     mqttHandleCMDAdmin(data);
+// }
 
 void doOperationsAlert(Alert* alert) {
     

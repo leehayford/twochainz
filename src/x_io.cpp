@@ -1,5 +1,35 @@
 #include "x_io.h"
 
+/* ADMIN SETTINGS *************************************************************************************/
+void writeAdminSettingsToFile() {
+    Serial.printf("\nwriteAdminSettingsToFile() -> creating %s file...\n", ADMIN_DEFAULT_FILE);
+    writeToFile(ADMIN_DEFAULT_FILE, g_admin.serializeToJSON());
+}
+
+void validateAdminSettings(char* data) {
+    Serial.printf("\nvalidateAdminSettings(data) -> data: %s\n\n", data);
+    g_admin.parseFromJSON(data);
+    changeHammerTimeroutPeriod();
+    changeITRDebounceTimerPeriod();
+}
+
+void readAdminSettingsFromFile() {
+    Serial.printf("\nreadAdminSettingsFromFile()...\n");
+    if( !fileExists(ADMIN_DEFAULT_FILE)         /* This is the first time this ESP has been run */
+    ) {
+        Serial.printf("\nreadAdminSettingsFromFile() -> %s does not exist\n", ADMIN_DEFAULT_FILE);
+        writeAdminSettingsToFile();             // Create the default admin settings file 
+    }
+
+    Serial.printf("\nfile exists; reading...\n");
+    char data[MQTT_PUB_BUFFER_SIZE] = "";
+    readFromFile(data, ADMIN_DEFAULT_FILE);
+    validateAdminSettings(data);
+}
+
+
+/* ADMIN SETTINGS *** END *****************************************************************************/
+
 
 /* INTERRUPTS *****************************************************************************************/
 
@@ -41,7 +71,7 @@ void setupInterrupts() {
 /* INTERRUPTS *** END ********************************************************************************/
 
 
-/* TIMERS *********************************************************************************************/
+/* TIMERS ********************************************************************************************/
 
 /* INTERRUPT PIN DEBOUNCE CHECK TIMER */
 uint32_t m_ui32NowMillis;
@@ -134,7 +164,7 @@ void setupTimers() {
     setupHammerTimer();
 }
 
-/* TIMERS *** END *************************************************************************************/
+/* TIMERS *** END ***********************************************************************************/
 
 
 
@@ -265,5 +295,7 @@ void setupIO() {
     setupMotor();
     
     checkStateIOPins();
+    
+    readAdminSettingsFromFile();
 }
 

@@ -16,6 +16,8 @@ void setup() {
     Serial.begin(SERIAL_BAUD);
     while(!Serial) delay(SERIAL_DELAY);
 
+    Serial.printf("\n\nSetting up device: %s...\n", SECRET_MQTT_DEVICE);
+
     setupFileSystem();
 
     setupWiFi(SECRET_WIFI_SSID, SECRET_WIFI_PW);
@@ -24,8 +26,6 @@ void setup() {
 
     setupIO();
 
-    writeAdminToFile();
-    readAdminFromFile();
 }
 
 
