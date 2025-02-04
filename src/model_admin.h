@@ -16,8 +16,8 @@ private:
 
     /* Operations */
     const char* opsTmrHammerKey = "\"ops_tmr_hammer_usec\":";
+    const char* opsTmrBrakeKey = "\"ops_tmr_brake_usec\":";
     const char* opsPosPeriodKey = "\"ops_pos_period_msec\":";
-    const char* opsMagDelayKey = "\"ops_mag_delay_msec\":";
 
     /* IO */
     const char* ioTmrITRDebKey = "\"io_tmr_itr_deb_usec\":";
@@ -47,8 +47,8 @@ public:
 
     /* Operations */
     int opsTmrHammer_uSec;
+    int opsTmrBrake_uSec;
     int opsPosPeriod_mSec;
-    int opsMagDelay_mSec;
 
     /* IO */
     int ioTmrITRDeb_uSec;
@@ -76,8 +76,8 @@ public:
 
         /* Operations */          
         opsTmrHammer_uSec = 500000;         // 0.5 seconds for hammer to drop
+        opsTmrBrake_uSec = 300000;          // 0.3 seconds to pressure to build / drop 
         opsPosPeriod_mSec = 300;            // 0.3 seconds between position updates
-        opsMagDelay_mSec = 300;             // 0.3 seconds to secure the hammer before moving
 
         /* IO */
         ioTmrITRDeb_uSec = 2000;            // 0.002 seconds default debounce 
@@ -144,8 +144,8 @@ public:
 
     void parseFromJSON(const char* jsonString) {
         jsonParseInt(jsonString, opsTmrHammerKey, opsTmrHammer_uSec);
+        jsonParseInt(jsonString, opsTmrBrakeKey, opsTmrBrake_uSec);
         jsonParseInt(jsonString, opsPosPeriodKey, opsPosPeriod_mSec);
-        jsonParseInt(jsonString, opsMagDelayKey, opsMagDelay_mSec);
 
         jsonParseInt(jsonString, ioTmrITRDebKey, ioTmrITRDeb_uSec);
 
@@ -175,8 +175,8 @@ public:
         jsonSerializeStart(jsonOut);
 
         jsonSerializeInt(jsonOut, opsTmrHammerKey, opsTmrHammer_uSec);
+        jsonSerializeInt(jsonOut, opsTmrBrakeKey, opsTmrBrake_uSec);
         jsonSerializeInt(jsonOut, opsPosPeriodKey, opsPosPeriod_mSec);
-        jsonSerializeInt(jsonOut, opsMagDelayKey, opsMagDelay_mSec);
 
         jsonSerializeInt(jsonOut, ioTmrITRDebKey, ioTmrITRDeb_uSec);
 

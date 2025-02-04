@@ -9,7 +9,9 @@
 
 #define STATUS_ESTOP "yearns for release... of the emergency stop button"
 #define STATUS_DOOR_OPEN "yearns for closure... of the door"
-#define STATUS_TOP_LIMIT "yearns to be less high... of fist"
+#define STATUS_TOP_LIMIT "yearns to put down his fist"
+#define STATUS_PRESSURE_HIGH "yearns to be held... by the brake"
+#define STATUS_PRESSURE_LOW "yearns for release... of the brake"
 #define STATUS_REQUEST_HELP "yearns for assistance"
 #define STATUS_WANT_CONFIG "yearns for purpose"
 
@@ -57,6 +59,8 @@ public:
     bool wantEStopRelease;
     bool wantDoorClose;
     bool wantFistDown;
+    bool wantBrakeOff;
+    bool wantBrakeOn;
     bool wantConfig;
 
     /* Cleared by Ops.doReorientation() */
@@ -72,8 +76,6 @@ public:
 
     bool raiseHammer;
     bool dropHammer;
-    bool wantBrakeOff;
-    bool wantBrakeOn;
     bool wantStrike;
 
     int cycleCount;
@@ -88,6 +90,8 @@ public:
         wantEStopRelease = false;
         wantDoorClose = false;
         wantFistDown = false;
+        wantBrakeOff = false;
+        wantBrakeOn = false;
         wantConfig = false;
 
         requestAid = false;
@@ -101,8 +105,6 @@ public:
 
         raiseHammer = false;
         dropHammer = false;
-        wantBrakeOff = false;
-        wantBrakeOn = false;
         wantStrike = false;
 
         cycleCount = 0;
@@ -121,13 +123,23 @@ public:
         wantEStopRelease = false;
         wantDoorClose = false;
         wantFistDown = false;
-        requestAid = false;
+        wantBrakeOff = false;
+        wantBrakeOn = false;
         wantConfig = false;
+
+        requestAid = false;                     // We stop requesting aid, lest we look like fools!
+        wantAid = false;                        // We stop yearning for aid, lest we look like fools!
+        
+        seekHammer = false;
+        seekAnvil = false;
+        seekHome = false;
+
+        raiseHammer = false;
+        dropHammer = false;
+        wantStrike = false;
     }
 
     void doReorientation() {
-        wantAid = false;                        // We stop yearning for aid, lest we look like fools!
-        requestAid = false;                     // We stop requesting aid, lest we look like fools!
         
         reassesOpStatus();
 

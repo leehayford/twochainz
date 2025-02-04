@@ -19,10 +19,14 @@ extern void doOperationsAlert(Alert* alert);
 
 extern void statusUpdate(const char* status_msg);
 
+extern void checkDiagnostics();
+
+extern bool isOperatingFaultCondition();
+
 extern Alert* runOperations();
 
 extern void schedulePositionUpdate();
 
-extern Alert* doPositionUpdate();
+extern void doPositionUpdate();
 
 #endif /* X_MACHINE_H */

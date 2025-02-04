@@ -24,6 +24,7 @@ private:
 
     const char* hammerTimeoutKey = "\"hammer_timeout\":";
     const char* interruptFlagKey = "\"interrupt_flag\":";
+    const char* brakeTimeoutKey = "\"brake_timeout\":";
     
     char jsonOut[MQTT_PUB_BUFFER_SIZE];
 
@@ -38,7 +39,7 @@ public:
     bool pressure;
 
     /* Relay control state */
-    bool breakOn;
+    bool brakeOn;
     bool magnetOn;
     
     int motorSteps;
@@ -46,6 +47,7 @@ public:
 
     bool hammerTimeout;
     bool interruptFlag;
+    bool brakeTimeout;
 
     State() {
         eStop = false;
@@ -56,7 +58,7 @@ public:
         topLimit = false;
         pressure = false;
         
-        breakOn = false;
+        brakeOn = false;
         magnetOn = false;
 
         motorSteps = 0;
@@ -64,6 +66,7 @@ public:
 
         hammerTimeout = false;
         interruptFlag = false;
+        brakeTimeout = false;
     }
 
     /* TODO: MAKE READ ONLY AFTER DEBUG */
@@ -76,7 +79,7 @@ public:
         jsonParseBool(jsonString, topLimitKey, topLimit);
         jsonParseBool(jsonString, pressureKey, pressure);
         
-        jsonParseBool(jsonString, brakeOnKey, breakOn);
+        jsonParseBool(jsonString, brakeOnKey, brakeOn);
         jsonParseBool(jsonString, magnetOnKey, magnetOn);
 
         jsonParseInt(jsonString, motorStepsKey, motorSteps);
@@ -84,6 +87,7 @@ public:
 
         jsonParseBool(jsonString, hammerTimeoutKey, hammerTimeout);
         jsonParseBool(jsonString, interruptFlagKey, interruptFlag);
+        jsonParseBool(jsonString, brakeTimeoutKey, brakeTimeout);
     }
     
     char* serializeToJSON() {
@@ -97,7 +101,7 @@ public:
         jsonSerializeBool(jsonOut, topLimitKey, topLimit);
         jsonSerializeBool(jsonOut, pressureKey, pressure);
         
-        jsonSerializeBool(jsonOut, brakeOnKey, breakOn);
+        jsonSerializeBool(jsonOut, brakeOnKey, brakeOn);
         jsonSerializeBool(jsonOut, magnetOnKey, magnetOn); 
 
         jsonSerializeInt(jsonOut, motorStepsKey, motorSteps);
@@ -105,6 +109,7 @@ public:
 
         jsonSerializeBool(jsonOut, hammerTimeoutKey, hammerTimeout); 
         jsonSerializeBool(jsonOut, interruptFlagKey, interruptFlag); 
+        jsonSerializeBool(jsonOut, brakeTimeoutKey, brakeTimeout); 
 
         jsonSerializeEnd(jsonOut);
         return jsonOut;

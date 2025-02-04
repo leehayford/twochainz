@@ -24,6 +24,8 @@ void setup() {
 
     setupMQTT_X(SECRET_MQTT_BROKER, SECRET_MQTT_PORT);
 
+    // deleteFile(ADMIN_DEFAULT_FILE); 
+
     setupIO();
 
 }
@@ -31,26 +33,16 @@ void setup() {
 
 void loop() {
 
-    Alert* alert = nullptr;
-    
-    if( g_ops.diagnosticMode
-    &&  !motorTargetReached() 
-    ) {
-        alert = doPositionUpdate(); 
+    if( !g_ops.diagnosticMode
+    ) {                                                                                                                        
+        Alert* alert = runOperations();
         if( alert
-        ) {
-            mqttPublishAlert(alert);            /* Even though we're lost, we aren't stopping */
-            setMQTTPubFlag(PUB_OPS_POS);        // Sing it
-            schedulePositionUpdate();           // Schedule the next update 
-        }             
+        )   mqttPublishAlert(alert);             
     }
-
-    else {
-        alert = runOperations();
-        if( alert
-        ) doOperationsAlert(alert);  
-    } 
-
+    
+    else 
+        checkDiagnostics();
+ 
     serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
 
 }

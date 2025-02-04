@@ -124,14 +124,8 @@ void mqttHandleCMDMoveDown(char* msg) {
 }
 void diagnosticMove(bool up) {
 
-    Alert* alert = nullptr;
-    alert = motorSetSpeed(g_admin.motHzLow);
-    if( alert
-    )   mqttPublishAlert(alert);
-
-    alert = motorGetPosition();         
-    if( alert
-    )   mqttPublishAlert(alert);
+    motorSetSpeed(g_admin.motHzLow);
+    motorGetPosition();         
 
     // Serial.printf("\nCurrent position: %d\n", g_state.motorSteps);
     int32_t course = (up ? g_admin.diagSteps : g_admin.diagSteps * -1 );

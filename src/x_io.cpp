@@ -2,26 +2,27 @@
 
 /* ADMIN SETTINGS *************************************************************************************/
 void writeAdminSettingsToFile() {
-    Serial.printf("\nwriteAdminSettingsToFile() -> creating %s file...\n", ADMIN_DEFAULT_FILE);
+    // Serial.printf("\nwriteAdminSettingsToFile() -> creating %s file...\n", ADMIN_DEFAULT_FILE);
     writeToFile(ADMIN_DEFAULT_FILE, g_admin.serializeToJSON());
 }
 
 void validateAdminSettings(char* data) {
-    Serial.printf("\nvalidateAdminSettings(data) -> data: %s\n\n", data);
+    // Serial.printf("\nvalidateAdminSettings(data) -> data: %s\n\n", data);
     g_admin.parseFromJSON(data);
-    changeHammerTimeroutPeriod();
+    changeHammerTimeoutPeriod();
     changeITRDebounceTimerPeriod();
+    changeBrakeTimeoutPeriod();
 }
 
 void readAdminSettingsFromFile() {
-    Serial.printf("\nreadAdminSettingsFromFile()...\n");
+    // Serial.printf("\nreadAdminSettingsFromFile()...\n");
     if( !fileExists(ADMIN_DEFAULT_FILE)         /* This is the first time this ESP has been run */
     ) {
-        Serial.printf("\nreadAdminSettingsFromFile() -> %s does not exist\n", ADMIN_DEFAULT_FILE);
+        // Serial.printf("\nreadAdminSettingsFromFile() -> %s does not exist\n", ADMIN_DEFAULT_FILE);
         writeAdminSettingsToFile();             // Create the default admin settings file 
     }
 
-    Serial.printf("\nfile exists; reading...\n");
+    // Serial.printf("\nfile exists; reading...\n");
     char data[MQTT_PUB_BUFFER_SIZE] = "";
     readFromFile(data, ADMIN_DEFAULT_FILE);
     validateAdminSettings(data);
@@ -41,7 +42,7 @@ ITRPin itrpFist(PIN_ITR_FIST, &g_state.fistLimit, ITR_PIN_ACTIVE_LOW);
 ITRPin itrpAnvil(PIN_ITR_ANVIL, &g_state.anvilLimit, ITR_PIN_ACTIVE_LOW);
 ITRPin itrpHome(PIN_ITR_HOME, &g_state.homeLimit, ITR_PIN_ACTIVE_LOW);
 ITRPin itrpTop(PIN_ITR_TOP, &g_state.topLimit, ITR_PIN_ACTIVE_LOW);
-ITRPin itrpPressure(PIN_ITR_PRESSURE, &g_state.pressure, ITR_PIN_ACTIVE_HIGH);
+ITRPin itrpPressure(PIN_ITR_PRESSURE, &g_state.pressure, ITR_PIN_ACTIVE_LOW);
 
 static void setITRPinDebounce(ITRPin *itrp) {
     if( itrp->checkTime == 0 )                                  /* This is a new event */
@@ -146,12 +147,49 @@ void setupHammerTimer() {
 }
 
 void startHammerTimer() {
-    g_state.hammerTimeout = false;          // Clear the flag
-    timerRestart(tmrHammerStrike);             // Necessary for calls subsequent to the first call
-    timerAlarmEnable(tmrHammerStrike);         // Hammertime is upon us
+    g_state.hammerTimeout = false;              // Clear the flag
+    timerRestart(tmrHammerStrike);              // Necessary for calls subsequent to the first call
+    timerAlarmEnable(tmrHammerStrike);          // Hammertime is upon us
 }
 
-void changeHammerTimeroutPeriod() {
+void changeHammerTimeoutPeriod() {
+    timerAlarmWrite(
+        tmrHammerStrike,
+        g_admin.opsTmrHammer_uSec,
+        OPS_HAMMER_TIMER_RUN_ONCE
+    );
+}
+
+/* Brake timer stuff */
+hw_timer_t *tmrBrakePressure = NULL;
+void setupBrakeTimer() {
+    tmrBrakePressure = timerBegin(
+        OPS_BRAKE_TIMER,
+        OPS_BRAKE_TIMER_PRESCALE,
+        OPS_BRAKE_TIMER_COUNT_UP
+    );
+
+    timerAttachInterrupt(
+        tmrBrakePressure,
+        [](){ g_state.brakeTimeout = true; },
+        OPS_BRAKE_TIMER_EDGE
+    );
+
+    timerAlarmWrite(
+        tmrBrakePressure,
+        OPS_BRAKE_TIMER_PERIOD_uSEC,
+        OPS_BRAKE_TIMER_RUN_ONCE
+    );
+
+}
+
+void startBrakeTimer() {
+    g_state.brakeTimeout = false;               // Clear the flag
+    timerRestart(tmrBrakePressure);             // Necessary for calls subsequent to the first call
+    timerAlarmEnable(tmrBrakePressure);         // Brake pressure should now be as expected
+}
+
+void changeBrakeTimeoutPeriod() {
     timerAlarmWrite(
         tmrHammerStrike,
         g_admin.opsTmrHammer_uSec,
@@ -162,6 +200,7 @@ void changeHammerTimeroutPeriod() {
 void setupTimers() {
     setupITRDebounceTimer();
     setupHammerTimer();
+    setupBrakeTimer();
 }
 
 /* TIMERS *** END ***********************************************************************************/
@@ -169,13 +208,19 @@ void setupTimers() {
 
 
 /* DIGITAL OUT **************************************************************************************/
-DOUTPin doutBrake(PIN_OUT_BRAKE, &g_state.breakOn, DOUT_PIN_ACTIVE_LOW);
-void brakeOn() { doutBrake.enable(); }      /* TODO: ERROR CHECKING */
-void brakeOff() { doutBrake.disable(); }    /* TODO: ERROR CHECKING */
+DOUTPin doutBrake(PIN_OUT_BRAKE, &g_state.brakeOn, DOUT_PIN_ACTIVE_LOW);
+void brakeOn() { 
+    doutBrake.enable(); 
+    startBrakeTimer();
+}      
+void brakeOff() { 
+    doutBrake.disable(); 
+    startBrakeTimer();
+}    
 
 DOUTPin doutMagnet(PIN_OUT_MAGNET, &g_state.magnetOn, DOUT_PIN_ACTIVE_HIGH);
-void magnetOn() { doutMagnet.enable(); }    /* TODO: ERROR CHECKING */
-void magnetOff() { doutMagnet.disable(); }  /* TODO: ERROR CHECKING */
+void magnetOn() { doutMagnet.enable(); }    
+void magnetOff() { doutMagnet.disable(); }  
 
 DOUTPin doutMotDir(PIN_OUT_MOT_DIR, nullptr, NULL, DOUT_PIN_ACTIVE_LOW);
 
@@ -196,7 +241,7 @@ void setupDigitalOutputs() {
 ESP_FlexyStepper m_motor;
 
 Alert ALERT_MOT_POS_FIX_LOST("motor position fix has been lost");
-Alert* motorGetPosition() {
+void motorGetPosition() {
 
     g_state.motorSteps = m_motor.getCurrentPositionInSteps();
 
@@ -212,38 +257,38 @@ Alert* motorGetPosition() {
 
     //     return &ALERT_MOT_POS_FIX_LOST;                     // Tell everyone we're lost 
     // }
-    return nullptr;
+    // return nullptr;
 }
 
-Alert* motorSetPositionAsZero() {
+void motorSetPositionAsZero() {
     m_motor.setCurrentPositionInSteps(0);
-    return motorGetPosition();
+    motorGetPosition();
 }
 
 Alert ALERT_MOT_SPEED_TOO_HIGH("motor target speed is too high", WARNING);
 Alert ALERT_MOT_SPEED_TOO_LOW("motor target speed is too low", WARNING);
-Alert* motorSetSpeed(uint32_t stepsPerSec) {
+void motorSetSpeed(uint32_t stepsPerSec) {
 
-    Alert* warn = nullptr;
+    // Alert* warn = nullptr;
 
     if( stepsPerSec > g_admin.motHzHigh                 /* We've been instructed poorly */
     ) { 
         stepsPerSec = g_admin.motHzHigh;                // We know better
-        warn = &ALERT_MOT_SPEED_TOO_HIGH;               // We level a warning
+        // warn = &ALERT_MOT_SPEED_TOO_HIGH;               // We level a warning
     }
 
     else 
     if( stepsPerSec < 1                                 /* We've been instructed poorly */
     ) { 
         stepsPerSec = g_admin.motHzLow;                 // We know better
-        warn = &ALERT_MOT_SPEED_TOO_LOW;                // We level a warning
+        // warn = &ALERT_MOT_SPEED_TOO_LOW;                // We level a warning
     }
 
     m_motor.setSpeedInStepsPerSecond(stepsPerSec);
     m_motor.setAccelerationInStepsPerSecondPerSecond(g_admin.motAccel);
     m_motor.setDecelerationInStepsPerSecondPerSecond(g_admin.motDecel);
 
-    return warn;
+    // return warn;
 }
 
 void motorSetCourse(int32_t steps) { 
