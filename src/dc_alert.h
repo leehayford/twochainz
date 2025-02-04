@@ -13,26 +13,32 @@ typedef enum {
 class Alert {
 private: 
     /* FOR JSON */
+    const char* headlineKey = "\"headline\":";
     const char* messageKey = "\"message\":";
     const char* codeKey = "\"code\":";
     char jsonOut[MQTT_PUB_BUFFER_SIZE];
 
     /* Data */
+    char* headline;
     char* message;
     eAlertCode_t code;
 
 public:
-    Alert(const char* m, eAlertCode_t c = ERROR) : 
+    Alert(const char* h, const char* m, eAlertCode_t c = ERROR) : 
+        headline((char*)h),
         message((char*)m), 
         code(c) 
     {}
+ 
+    char* getHeadline() { return headline; }
+
+    char* getMessage() { return message; }
 
     eAlertCode_t getCode() { return code; }
- 
-    char* getText() { return message; }
 
     char* getJSON() {
         jsonSerializeStart(jsonOut);
+        jsonSerializeString(jsonOut, headlineKey, headline);
         jsonSerializeString(jsonOut, messageKey, message);
         jsonSerializeInt(jsonOut, codeKey, (int)code);
         jsonSerializeEnd(jsonOut);

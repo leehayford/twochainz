@@ -74,15 +74,6 @@ void readFromFile(char* data, const char* fileName) {
         return;
     }
 
-    // Serial.printf("\n%s Content:\n", fileName);
-    // int length = file.size() + 1;
-    // char buff[length] = "";
-    // file.read((uint8_t*)buff, length);
-    // Serial.printf("\nreadFromFile -> length: %d\n", length);
-    // Serial.printf("\nreadFromFile -> data: %s\n", buff);
-    // strcat(data, buff);
-
-
     file.read((uint8_t*)data, file.size() + 1);
 
     file.close();
@@ -90,14 +81,14 @@ void readFromFile(char* data, const char* fileName) {
 
 /* WIFI */
 void setupWiFi(const char* ssid, const char* password) {
-    Serial.printf("\nConnecting to %s", ssid);
+    Serial.printf("\nConnecting to %s..", ssid);
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
         delay(2000);
         Serial.print(".");
     }
-    Serial.printf("\nConnected..! Got IP: %s\n\n", WiFi.localIP().toString());
+    Serial.printf("\nWiFi Connected!\tIP: %s\n\n", WiFi.localIP().toString());
 }
 
 
@@ -189,17 +180,17 @@ void serviceMQTTClient(const char* user, const char* pw, mqttSubscription* subs,
 void reconnectMqttClient(const char* user, const char* pw, mqttSubscription* subs, int length) {
 
     while (!m_mqttClient.connected()) {
-        Serial.print("Attempting MQTT connection...");
+        Serial.printf("Attempting MQTT connection...\n");
 
         if (m_mqttClient.connect(SECRET_MQTT_CLIENT, user, pw)) {
-            Serial.println("MQTT conneted");
+            Serial.printf("MQTT connected!\n");
             
             char fullTopic[50] = SECRET_MQTT_DEVICE;
             for (int i = 0; i < length; i++) {
                 strcpy(fullTopic, SECRET_MQTT_DEVICE);
                 mqttCMDBuilder(fullTopic, subs[i].topic);
                 m_mqttClient.subscribe(fullTopic);
-                Serial.printf("Subscribed to: %s\n", fullTopic);
+                // Serial.printf("Subscribed to: %s\n", fullTopic);
             }
 
         } else {

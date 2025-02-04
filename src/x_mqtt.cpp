@@ -81,14 +81,14 @@ void mqttHandleCMDBrakeOn(char* msg) {
     if( g_ops.diagnosticMode
     ) {
         brakeOn();
-        mqttHandleCMDReport(msg);
+        // mqttHandleCMDReport(msg);
     }
 }
 void mqttHandleCMDBrakeOff(char* msg) { 
     if( g_ops.diagnosticMode
     ) {
         brakeOff();
-        mqttHandleCMDReport(msg);
+        // mqttHandleCMDReport(msg);
     }
 }
 
@@ -96,14 +96,14 @@ void mqttHandleCMDMagnetOn(char* msg) {
     if( g_ops.diagnosticMode
     ) {
         magnetOn();
-        mqttHandleCMDReport(msg);
+        // mqttHandleCMDReport(msg);
     }
 }
 void mqttHandleCMDMagnetOff(char* msg) { 
     if( g_ops.diagnosticMode
     ) {
         magnetOff();
-        mqttHandleCMDReport(msg);
+        // mqttHandleCMDReport(msg);
     }
 }
 
@@ -112,14 +112,14 @@ void mqttHandleCMDMoveUp(char* msg) {
     if( g_ops.diagnosticMode
     ) {
         diagnosticMove(true);
-        mqttHandleCMDReport(msg);
+        // mqttHandleCMDReport(msg);
     }
 }
 void mqttHandleCMDMoveDown(char* msg) { 
     if( g_ops.diagnosticMode
     ) {
         diagnosticMove(false);
-        mqttHandleCMDReport(msg);
+        // mqttHandleCMDReport(msg);
     }
 }
 void diagnosticMove(bool up) {
@@ -138,7 +138,7 @@ void mqttHandleCMDMotorStop(char* msg) {
     if( g_ops.diagnosticMode
     ) {
         motorStop();
-        mqttHandleCMDReport(msg);
+        // mqttHandleCMDReport(msg);
     }
 }
 
@@ -151,7 +151,6 @@ mqttSubscription m_mqttSubs[N_SUBS] = {
     {"admin", (mqttCMDFunc)&mqttHandleCMDAdmin},
     {"admin/set_def", (mqttCMDFunc)&mqttHandleCMDAdminSetDefaults},
     {"admin/get_def", (mqttCMDFunc)&mqttHandleCMDAdminGetDefaults},
-    {"admin", (mqttCMDFunc)&mqttHandleCMDAdmin},
     {"state", (mqttCMDFunc)&mqttHandleCMDState},
     {"config", (mqttCMDFunc)&mqttHandleCMDConfig},
 

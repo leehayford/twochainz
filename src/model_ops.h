@@ -12,6 +12,7 @@
 #define STATUS_TOP_LIMIT "yearns to put down his fist"
 #define STATUS_PRESSURE_HIGH "yearns to be held... by the brake"
 #define STATUS_PRESSURE_LOW "yearns for release... of the brake"
+#define STATUS_HOME_LIMIT "yearns for the hammer and/or anvil"
 #define STATUS_REQUEST_HELP "yearns for assistance"
 #define STATUS_WANT_CONFIG "yearns for purpose"
 
@@ -28,6 +29,9 @@ private:
     const char* wantEStopReleaseKey = "\"want_estop_release\":";
     const char* wantDoorCloseKey = "\"want_door_close\":";
     const char* wantFistDownKey = "\"want_fist_down\":";
+    const char* wantBrakeOffKey = "\"want_brake_off\":";
+    const char* wantBrakeOnKey = "\"want_brake_on\":";
+    const char* wantHmrAnvilKey = "\"want_hmr_anvil\":";
     const char* wantConfigKey = "\"want_config\":";
 
     const char* requestAidKey = "\"request_aid\":";
@@ -41,8 +45,6 @@ private:
 
     const char* raiseHammerKey = "\"raise_hammer\":";
     const char* dropHammerKey = "\"drop_hammer\":";
-    const char* wantBrakeOffKey = "\"want_brake_off\":";
-    const char* wantBrakeOnKey = "\"want_brake_on\":";
     const char* wantStrikeKey = "\"want_strike\":";
 
     const char* cycleCountKey = "\"cycle_count\":";
@@ -61,6 +63,7 @@ public:
     bool wantFistDown;
     bool wantBrakeOff;
     bool wantBrakeOn;
+    bool wantHmrAnvil;
     bool wantConfig;
 
     /* Cleared by Ops.doReorientation() */
@@ -87,29 +90,7 @@ public:
     Ops() {
         diagnosticMode = false;
 
-        wantEStopRelease = false;
-        wantDoorClose = false;
-        wantFistDown = false;
-        wantBrakeOff = false;
-        wantBrakeOn = false;
-        wantConfig = false;
-
-        requestAid = false;
-        wantAid = false;
-        reorient = true;
-
-        goHome = true;
-        seekHammer = false;
-        seekAnvil = false;
-        seekHome = false;
-
-        raiseHammer = false;
-        dropHammer = false;
-        wantStrike = false;
-
-        cycleCount = 0;
-        stepTarget = 0;
-        stepHz = 0;
+        cmdReset();
 
         setStatus("initialized");
     }
@@ -119,16 +100,17 @@ public:
         // Serial.printf("\ng_ops.setStatus( %s )\n", status);
     }
 
-    void reassesOpStatus() {
+    void clearOpFlags() {
         wantEStopRelease = false;
         wantDoorClose = false;
         wantFistDown = false;
         wantBrakeOff = false;
         wantBrakeOn = false;
+        wantHmrAnvil = false;
         wantConfig = false;
 
-        requestAid = false;                     // We stop requesting aid, lest we look like fools!
-        wantAid = false;                        // We stop yearning for aid, lest we look like fools!
+        requestAid = false;                     
+        wantAid = false;                        
         
         seekHammer = false;
         seekAnvil = false;
@@ -140,58 +122,58 @@ public:
     }
 
     void doReorientation() {
-        
-        reassesOpStatus();
-
-        // These flags are cleared in the doGoHome function
-        reorient = true;                        // We embark on a journey of self discovery
-        goHome = true;                          // Spoiler alert: such journies nearly always lead us home
+        reorient = true;        // We embark on a journey of self discovery
+        goHome = true;          // Spoiler alert: such journies nearly always lead us home
     }
 
     void clearProgress() {
         cycleCount = 0;
         stepTarget = 0;
+        stepHz = 0;
     }
 
     void cmdReset() {
         clearProgress();
+        clearOpFlags();
         doReorientation();
     }
 
     void cmdContinue() { // Serial.printf("Ops.cmdContinue() :\n");
+        clearOpFlags();
         doReorientation();
     }
 
-    /* TODO: MAKE READ ONLY AFTER DEBUG */
-    void parseFromJSON(const char* jsonString) {
-        jsonParseBool(jsonString, diagnosticModeKey, diagnosticMode);
+    /* MAKE READ ONLY AFTER DEBUG */
+    // void parseFromJSON(const char* jsonString) {
+    //     jsonParseBool(jsonString, diagnosticModeKey, diagnosticMode);
 
-        jsonParseBool(jsonString, wantEStopReleaseKey, wantEStopRelease);
-        jsonParseBool(jsonString, wantDoorCloseKey, wantDoorClose);
-        jsonParseBool(jsonString, wantFistDownKey, wantFistDown);
-        jsonParseBool(jsonString, wantConfigKey, wantConfig);
+    //     jsonParseBool(jsonString, wantEStopReleaseKey, wantEStopRelease);
+    //     jsonParseBool(jsonString, wantDoorCloseKey, wantDoorClose);
+    //     jsonParseBool(jsonString, wantFistDownKey, wantFistDown);
+    //     jsonParseBool(jsonString, wantBrakeOffKey, wantBrakeOff);
+    //     jsonParseBool(jsonString, wantBrakeOnKey, wantBrakeOn);
+    //     jsonParseBool(jsonString, wantHmrAnvilKey, wantHmrAnvil);
+    //     jsonParseBool(jsonString, wantConfigKey, wantConfig);
 
-        jsonParseBool(jsonString, requestAidKey, requestAid);
-        jsonParseBool(jsonString, wantAidKey, wantAid);
-        jsonParseBool(jsonString, reorientKey, reorient);
+    //     jsonParseBool(jsonString, requestAidKey, requestAid);
+    //     jsonParseBool(jsonString, wantAidKey, wantAid);
+    //     jsonParseBool(jsonString, reorientKey, reorient);
 
-        jsonParseBool(jsonString, goHomeKey, goHome);
-        jsonParseBool(jsonString, seekHammerKey, seekHammer);
-        jsonParseBool(jsonString, seekAnvilKey, seekAnvil);
-        jsonParseBool(jsonString, seekHomeKey, seekHome);
+    //     jsonParseBool(jsonString, goHomeKey, goHome);
+    //     jsonParseBool(jsonString, seekHammerKey, seekHammer);
+    //     jsonParseBool(jsonString, seekAnvilKey, seekAnvil);
+    //     jsonParseBool(jsonString, seekHomeKey, seekHome);
 
-        jsonParseBool(jsonString, raiseHammerKey, raiseHammer);
-        jsonParseBool(jsonString, dropHammerKey, dropHammer);
-        jsonParseBool(jsonString, wantBrakeOffKey, wantBrakeOff);
-        jsonParseBool(jsonString, wantBrakeOnKey, wantBrakeOn);
-        jsonParseBool(jsonString, wantStrikeKey, wantStrike);
+    //     jsonParseBool(jsonString, raiseHammerKey, raiseHammer);
+    //     jsonParseBool(jsonString, dropHammerKey, dropHammer);
+    //     jsonParseBool(jsonString, wantStrikeKey, wantStrike);
 
-        jsonParseInt(jsonString, cycleCountKey, cycleCount);
-        jsonParseInt(jsonString, stepTargetKey, stepTarget);
-        jsonParseInt(jsonString, stepHzKey, stepHz);
+    //     jsonParseInt(jsonString, cycleCountKey, cycleCount);
+    //     jsonParseInt(jsonString, stepTargetKey, stepTarget);
+    //     jsonParseInt(jsonString, stepHzKey, stepHz);
         
-        jsonParseString(jsonString, statusKey, status, sizeof(status));
-    }
+    //     jsonParseString(jsonString, statusKey, status, sizeof(status));
+    // }
         
     char* serializeToJSON() {
         jsonSerializeStart(jsonOut);
@@ -201,6 +183,9 @@ public:
         jsonSerializeBool(jsonOut, wantEStopReleaseKey, wantEStopRelease);
         jsonSerializeBool(jsonOut, wantDoorCloseKey, wantDoorClose);
         jsonSerializeBool(jsonOut, wantFistDownKey, wantFistDown);
+        jsonSerializeBool(jsonOut, wantBrakeOffKey, wantBrakeOff);
+        jsonSerializeBool(jsonOut, wantBrakeOnKey, wantBrakeOn);
+        jsonSerializeBool(jsonOut, wantHmrAnvilKey, wantHmrAnvil);
         jsonSerializeBool(jsonOut, wantConfigKey, wantConfig);
 
         jsonSerializeBool(jsonOut, requestAidKey, requestAid);
@@ -214,8 +199,6 @@ public:
 
         jsonSerializeBool(jsonOut, raiseHammerKey, raiseHammer); 
         jsonSerializeBool(jsonOut, dropHammerKey, dropHammer);
-        jsonSerializeBool(jsonOut, wantBrakeOffKey, wantBrakeOff);
-        jsonSerializeBool(jsonOut, wantBrakeOnKey, wantBrakeOn);
         jsonSerializeBool(jsonOut, wantStrikeKey, wantStrike);
 
         jsonSerializeInt(jsonOut, cycleCountKey, cycleCount);

@@ -34,8 +34,7 @@ void mqttPublishOps();
 void mqttPublishOpsPosition();  
 
 
-#define N_SUBS 19
-
+#define N_SUBS 18
 /* Message IGNORED 
 Sets MQTT publish flags: 
 - Admin

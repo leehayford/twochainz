@@ -208,7 +208,6 @@ public:
             : HIGH                          // ACTIVE HIGH --> TRUE (ENABLED) when pin is HIGH
         ));
         checkPin();                         // Make sure we know what state the pin is in now
-        /* TODO: ERROR ON FAILURE */
     }
 
     void disable() {
@@ -247,8 +246,6 @@ extern void motorStop();
 
 /* MOTOR CONTROL *** END *************************************************************************/
 
-
-extern void checkStateIOPins();
 extern void setupIO();
 
 

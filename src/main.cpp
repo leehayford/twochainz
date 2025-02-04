@@ -33,16 +33,20 @@ void setup() {
 
 void loop() {
 
-    if( !g_ops.diagnosticMode
-    ) {                                                                                                                        
-        Alert* alert = runOperations();
-        if( alert
-        )   mqttPublishAlert(alert);             
-    }
-    
+    Alert* alert = nullptr;
+
+    if( g_ops.diagnosticMode
+    )   checkDiagnostics();
+
     else 
-        checkDiagnostics();
+        alert = runOperations();
+
+    if( alert
+    )   mqttPublishAlert(alert);             
  
-    serviceMQTTClient_X(SECRET_MQTT_USER, SECRET_MQTT_PW);
+    serviceMQTTClient_X(
+        SECRET_MQTT_USER, 
+        SECRET_MQTT_PW
+    );
 
 }

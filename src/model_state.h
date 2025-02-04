@@ -69,26 +69,26 @@ public:
         brakeTimeout = false;
     }
 
-    /* TODO: MAKE READ ONLY AFTER DEBUG */
-    void parseFromJSON(const char* jsonString) {
-        jsonParseBool(jsonString, eStopKey, eStop);
-        jsonParseBool(jsonString, doorOpenKey, doorOpen);
-        jsonParseBool(jsonString, fistLimitKey, fistLimit);
-        jsonParseBool(jsonString, anvilLimitKey, anvilLimit);
-        jsonParseBool(jsonString, homeLimitKey, homeLimit);
-        jsonParseBool(jsonString, topLimitKey, topLimit);
-        jsonParseBool(jsonString, pressureKey, pressure);
+    /* MAKE READ ONLY AFTER DEBUG */
+    // void parseFromJSON(const char* jsonString) {
+    //     jsonParseBool(jsonString, eStopKey, eStop);
+    //     jsonParseBool(jsonString, doorOpenKey, doorOpen);
+    //     jsonParseBool(jsonString, fistLimitKey, fistLimit);
+    //     jsonParseBool(jsonString, anvilLimitKey, anvilLimit);
+    //     jsonParseBool(jsonString, homeLimitKey, homeLimit);
+    //     jsonParseBool(jsonString, topLimitKey, topLimit);
+    //     jsonParseBool(jsonString, pressureKey, pressure);
         
-        jsonParseBool(jsonString, brakeOnKey, brakeOn);
-        jsonParseBool(jsonString, magnetOnKey, magnetOn);
+    //     jsonParseBool(jsonString, brakeOnKey, brakeOn);
+    //     jsonParseBool(jsonString, magnetOnKey, magnetOn);
 
-        jsonParseInt(jsonString, motorStepsKey, motorSteps);
-        jsonParseFloat(jsonString, currentHeightKey, currentHeight);
+    //     jsonParseInt(jsonString, motorStepsKey, motorSteps);
+    //     jsonParseFloat(jsonString, currentHeightKey, currentHeight);
 
-        jsonParseBool(jsonString, hammerTimeoutKey, hammerTimeout);
-        jsonParseBool(jsonString, interruptFlagKey, interruptFlag);
-        jsonParseBool(jsonString, brakeTimeoutKey, brakeTimeout);
-    }
+    //     jsonParseBool(jsonString, hammerTimeoutKey, hammerTimeout);
+    //     jsonParseBool(jsonString, interruptFlagKey, interruptFlag);
+    //     jsonParseBool(jsonString, brakeTimeoutKey, brakeTimeout);
+    // }
     
     char* serializeToJSON() {
         jsonSerializeStart(jsonOut);

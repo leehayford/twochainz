@@ -1,13 +1,13 @@
 #include "x_io.h"
 
+
 /* ADMIN SETTINGS *************************************************************************************/
+
 void writeAdminSettingsToFile() {
-    // Serial.printf("\nwriteAdminSettingsToFile() -> creating %s file...\n", ADMIN_DEFAULT_FILE);
     writeToFile(ADMIN_DEFAULT_FILE, g_admin.serializeToJSON());
 }
 
 void validateAdminSettings(char* data) {
-    // Serial.printf("\nvalidateAdminSettings(data) -> data: %s\n\n", data);
     g_admin.parseFromJSON(data);
     changeHammerTimeoutPeriod();
     changeITRDebounceTimerPeriod();
@@ -15,26 +15,19 @@ void validateAdminSettings(char* data) {
 }
 
 void readAdminSettingsFromFile() {
-    // Serial.printf("\nreadAdminSettingsFromFile()...\n");
     if( !fileExists(ADMIN_DEFAULT_FILE)         /* This is the first time this ESP has been run */
-    ) {
-        // Serial.printf("\nreadAdminSettingsFromFile() -> %s does not exist\n", ADMIN_DEFAULT_FILE);
-        writeAdminSettingsToFile();             // Create the default admin settings file 
-    }
-
-    // Serial.printf("\nfile exists; reading...\n");
+    )   writeAdminSettingsToFile();             // Create the default admin settings file 
+    
     char data[MQTT_PUB_BUFFER_SIZE] = "";
     readFromFile(data, ADMIN_DEFAULT_FILE);
     validateAdminSettings(data);
 }
 
-
 /* ADMIN SETTINGS *** END *****************************************************************************/
 
 
-/* INTERRUPTS *****************************************************************************************/
 
-// uint32_t g_ui32InterruptFlag = 0;
+/* INTERRUPTS *****************************************************************************************/
 
 ITRPin itrpEStop(PIN_ITR_ESTOP, &g_state.eStop, ITR_PIN_ACTIVE_LOW);
 ITRPin itrpDoor(PIN_ITR_DOOR, &g_state.doorOpen, ITR_PIN_ACTIVE_HIGH);
@@ -56,7 +49,6 @@ void IRAM_ATTR isrHome() { setITRPinDebounce(&itrpHome); }
 void IRAM_ATTR isrTop() { setITRPinDebounce(&itrpTop); }
 void IRAM_ATTR isrPressure() { setITRPinDebounce(&itrpPressure); }
 
-
 void setupInterrupts() {
 
     itrpEStop.setupPin(isrEStop);
@@ -70,6 +62,7 @@ void setupInterrupts() {
 }
 
 /* INTERRUPTS *** END ********************************************************************************/
+
 
 
 /* TIMERS ********************************************************************************************/
@@ -123,7 +116,7 @@ void changeITRDebounceTimerPeriod() {
     );
 }
 
-/* Hammertime stuff */
+/* HAMMER-TIME TIMER */
 hw_timer_t *tmrHammerStrike = NULL;
 void setupHammerTimer() {
     tmrHammerStrike = timerBegin(
@@ -160,7 +153,7 @@ void changeHammerTimeoutPeriod() {
     );
 }
 
-/* Brake timer stuff */
+/* BRAKE PRESSURE TIMER */
 hw_timer_t *tmrBrakePressure = NULL;
 void setupBrakeTimer() {
     tmrBrakePressure = timerBegin(
@@ -240,7 +233,6 @@ void setupDigitalOutputs() {
 /* MOTOR CONTROL ***********************************************************************************/
 ESP_FlexyStepper m_motor;
 
-Alert ALERT_MOT_POS_FIX_LOST("motor position fix has been lost");
 void motorGetPosition() {
 
     g_state.motorSteps = m_motor.getCurrentPositionInSteps();
@@ -248,61 +240,34 @@ void motorGetPosition() {
     g_state.currentHeight = 
         ((float)g_state.motorSteps / g_admin.motStepsRev) 
         * g_admin.motInchRev;
-
-    // if( !g_ops.diagnosticMode                               /* We're not currently diagnosing something */
-    // &&  (   g_state.motorSteps < -3                          /* We're lost */
-    //     ||  g_state.motorSteps > FIST_HEIGHT_MAX_STEP       /* We're lost */
-    //     )
-    // )  { 
-
-    //     return &ALERT_MOT_POS_FIX_LOST;                     // Tell everyone we're lost 
-    // }
-    // return nullptr;
 }
 
 void motorSetPositionAsZero() {
+
     m_motor.setCurrentPositionInSteps(0);
     motorGetPosition();
 }
 
-Alert ALERT_MOT_SPEED_TOO_HIGH("motor target speed is too high", WARNING);
-Alert ALERT_MOT_SPEED_TOO_LOW("motor target speed is too low", WARNING);
 void motorSetSpeed(uint32_t stepsPerSec) {
 
-    // Alert* warn = nullptr;
-
     if( stepsPerSec > g_admin.motHzHigh                 /* We've been instructed poorly */
-    ) { 
-        stepsPerSec = g_admin.motHzHigh;                // We know better
-        // warn = &ALERT_MOT_SPEED_TOO_HIGH;               // We level a warning
-    }
-
+    )   stepsPerSec = g_admin.motHzHigh;                // We know better
     else 
     if( stepsPerSec < 1                                 /* We've been instructed poorly */
-    ) { 
-        stepsPerSec = g_admin.motHzLow;                 // We know better
-        // warn = &ALERT_MOT_SPEED_TOO_LOW;                // We level a warning
-    }
+    )   stepsPerSec = g_admin.motHzLow;                 // We know better
 
     m_motor.setSpeedInStepsPerSecond(stepsPerSec);
     m_motor.setAccelerationInStepsPerSecondPerSecond(g_admin.motAccel);
     m_motor.setDecelerationInStepsPerSecondPerSecond(g_admin.motDecel);
-
-    // return warn;
 }
 
 void motorSetCourse(int32_t steps) { 
     m_motor.setTargetPositionRelativeInSteps(steps); 
 }
 
-void motorStop() { 
-    // motorSetCourse(0); 
-    m_motor.emergencyStop();
-}
+void motorStop() { m_motor.emergencyStop(); }
 
-bool motorTargetReached() { 
-    return (m_motor.getDistanceToTargetSigned() == 0); 
-}
+bool motorTargetReached() { return (m_motor.getDistanceToTargetSigned() == 0); }
 
 void setupMotor() {
     m_motor.connectToPins(doutMotStep.pin, doutMotDir.pin);
@@ -310,24 +275,9 @@ void setupMotor() {
     motorStop();
 }
 
-
 /* MOTOR CONTROL *** END *************************************************************************/
 
 
-
-void checkStateIOPins() {
-
-    itrpEStop.checkPin();
-    itrpDoor.checkPin();
-    itrpFist.checkPin();
-    itrpAnvil.checkPin();
-    itrpHome.checkPin();
-    itrpTop.checkPin();
-    itrpPressure.checkPin();
-
-    doutBrake.checkPin();
-    doutMagnet.checkPin();
-}
 
 void setupIO() {
 
@@ -339,7 +289,16 @@ void setupIO() {
     
     setupMotor();
     
-    checkStateIOPins();
+    // Check initial pin states
+    itrpEStop.checkPin();
+    itrpDoor.checkPin();
+    itrpFist.checkPin();
+    itrpAnvil.checkPin();
+    itrpHome.checkPin();
+    itrpTop.checkPin();
+    itrpPressure.checkPin();
+    doutBrake.checkPin();
+    doutMagnet.checkPin();
     
     readAdminSettingsFromFile();
 }

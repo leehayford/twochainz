@@ -1,43 +1,34 @@
 #include "x_machine.h"
 
-void doOperationsAlert(Alert* alert) {
-    
-    if( alert->getCode() == ERROR) {        /* We have an ERROR alert */
-        motorStop();                        // We stop going places, to avoid making things worse
-        brakeOn();                          // We apply the brake
-        g_ops.wantAid = true;               // We take ownership of our need for help
-    }
-    mqttPublishAlert(alert);                // We tell all of our troubles
-}
-
 void statusUpdate(const char* status_msg) {
     // Serial.printf("\nstatusUpdate(%s)", status_msg);
     g_ops.setStatus(status_msg);
-    setMQTTPubFlag(PUB_CONFIG);
+    // setMQTTPubFlag(PUB_CONFIG);
     setMQTTPubFlag(PUB_STATE);
     setMQTTPubFlag(PUB_OPS);
 }
 
 void loadRecoveryCourseAndSeed() {
-    g_ops.stepTarget = g_admin.getRecoverySteps();  // We will attempt to do the full 48.0" (DOWN) and reassess
+
+    g_ops.stepTarget = g_admin.getRecoverySteps();  // We will attempt to do the max distance (DOWN) and reassess
+
     g_ops.stepHz = g_admin.motHzLow;                // We will proceed at SLOW rip 
 }
 
 void loadHomeCourseAndSeed() {
-    g_ops.stepTarget = 
-        (g_state.motorSteps + g_admin.motStepsOver) 
-        * -1;                                       // We set our course for home (DOWN)
+
+    g_ops.stepTarget = -1
+    * (g_state.motorSteps + g_admin.motStepsOver);  // We set our course for home (DOWN)
 
     g_ops.stepHz = g_admin.motHzHigh;               // We will proceed at FULL RIP!
 }
 
 void loadQuestCourseAndSpeed() {
-    // We set our course for the height of configuration (UP)
-    g_ops.stepTarget = (g_config.height / g_admin.motInchRev) * g_admin.motStepsRev;
-
-    g_ops.stepHz = g_admin.motHzHigh;           // We will proceed at FULL RIP!  
     
-    // Serial.printf("\nx_machine getQuestCourseAndSpeed:\tSTEPS: %d\tHz: %d\n", g_ops.stepTarget, g_ops.stepHz); 
+    g_ops.stepTarget = g_admin.motStepsRev 
+    * (g_config.height / g_admin.motInchRev);       // We set our course for the height of configuration (UP)
+
+    g_ops.stepHz = g_admin.motHzHigh;               // We will proceed at FULL RIP!   
 }
  
 void moveToTarget() {
@@ -59,11 +50,6 @@ void moveToTarget() {
 
     motorSetSpeed(g_ops.stepHz);
     motorSetCourse(g_ops.stepTarget);           // We get to steppin'
-    // Serial.printf(
-    //     "\nx_machine moveToTarget:\tSTEPS: %d\tHz: %d\n", 
-    //     g_ops.stepTarget, 
-    //     g_ops.stepHz
-    // ); 
    
 }
 
@@ -71,7 +57,7 @@ void moveToTarget() {
 
 
 
-Alert ALERT_ESTOP("emergency stop has been initiated", ERROR);
+Alert ALERT_ESTOP("emergency stop", "2Chainz has suffered an emergency", ERROR);
 /* Called by isOperatingFaultCondition()
 When the EStop button is pressed:
 - Shut everything down
@@ -98,9 +84,8 @@ bool isEStopPressed() {
         }
     }
        
-    else                                          
-    if( !g_state.eStop                          /* Release has been given */ 
-    &&  g_ops.wantEStopRelease                  /* Still we yearn for release */
+    else                                        /* Release has been given */   
+    if( g_ops.wantEStopRelease                  /* Still we yearn for release */
     ) {  
         g_ops.wantEStopRelease = false;         // We stop yearning for release, lest we look like perverts!
         statusUpdate((char*)"...");
@@ -108,7 +93,7 @@ bool isEStopPressed() {
     return g_ops.wantEStopRelease; 
 }
 
-Alert ALERT_DOOR_OPEN("door open; 2chainz has been violated", ERROR);
+Alert ALERT_DOOR_OPEN("door open", "2Chainz has been violated", ERROR);
 /* Called by isOperatingFaultCondition()
 When the the door is opened:
 - Shut everything down
@@ -135,10 +120,8 @@ bool isDoorOpen() {
         }
     }
      
-
-    else                                          
-    if( !g_state.doorOpen                       /* The door is closed */
-    &&  g_ops.wantDoorClose                     /* Still we yearn for closure */
+    else                                        /* The door is closed */                            
+    if( g_ops.wantDoorClose                     /* Still we yearn for closure */
     ) {  
         g_ops.wantDoorClose = false;            // We stop yearning for closure, lest we appear incapable of emotional growth!
         statusUpdate((char*)"...");
@@ -147,7 +130,7 @@ bool isDoorOpen() {
     return g_ops.wantDoorClose;
 }
 
-Alert ALERT_TOP_LIMIT("top limit fault; 2chainz is way too high right now", ERROR);
+Alert ALERT_TOP_LIMIT("top limit fault", "2Chainz is way too high right now", ERROR);
 /* Called by isOperatingFaultCondition()
 Returns true while the fist is too high */
 bool isTopLimitFault() {
@@ -166,18 +149,49 @@ bool isTopLimitFault() {
         }
     }
     
-    else                                          
-    if( !g_state.topLimit                       /* We are like 'regular high' now */
-    &&  g_ops.wantFistDown                      /* Still we yearn to be less high */
+    else                                        /* We are like 'regular high' now */
+    if( g_ops.wantFistDown                      /* Still we yearn to be less high */
     ) { 
         g_ops.wantFistDown = false;             // We stop yearning for sobriety, lest we appear light-weiths!
         statusUpdate((char*)"...");
     }
+
     return g_ops.wantFistDown;
 }
 
-Alert ALERT_PRESSURE_HIGH("failed to apply brake; high pressure", ERROR);
-Alert ALERT_PRESSURE_LOW("failed to release brake; low pressure", ERROR);
+
+Alert ALERT_HOME_LIMIT("home limit fault", "reached home before hammer and anvil were located", ERROR);
+bool isHomeLimitFault() {
+
+    if( g_state.homeLimit                           /* We reached home */
+    &&  (   !g_state.fistLimit                      /* We have not found the hammer */
+        ||  !g_state.anvilLimit                     /* We have not found the anvil */
+        )                                           
+    ) {
+        motorStop();                                // We stop going places, to avoid making things worse
+        brakeOn();                                  // We apply the brake
+        g_ops.wantAid = true;                       // We take ownership of our need for help
+
+        if( !g_ops.wantHmrAnvil
+        ) {
+            mqttPublishAlert(&ALERT_HOME_LIMIT);    // We expose this treachery!
+            statusUpdate(STATUS_HOME_LIMIT);        // We expose it ALL!
+            g_ops.wantHmrAnvil = true;              // We yearn for the hammer and / or anvil
+        }
+    }
+
+    else                                            /* We are either, at home with all the stuff or we left home */
+    if( g_ops.wantHmrAnvil                          /* Still we yearn for the hammer / anvil */
+    ) {
+        g_ops.wantHmrAnvil = false;                 // We stop yearning for that which we already have or nolonger need
+        statusUpdate((char*)"...");
+    }
+
+    return g_ops.wantHmrAnvil;
+}
+
+Alert ALERT_PRESSURE_HIGH("high pressure fault", "failed to apply brake", ERROR);
+Alert ALERT_PRESSURE_LOW("low pressure fault", "failed to release brake", ERROR);
 /* Called by isOperatingFaultCondition() 
 Returns true after the brake pressure timeout, 
 when: 
@@ -187,62 +201,60 @@ bool isPressureFault() {
     
     bool pressureFault = false;
 
-    if( g_state.brakeTimeout                            /* We must have started the brake timer, and we must find out why... */
+    if( g_state.brakeTimeout                            /* The brake timer was run; we must find out why... */
     ) {
 
-        if( g_state.brakeOn                             /* We want to apply the brake */                    
-        &&  g_state.pressure                            /* We still have pressure, though we want none! */
+        bool highPressure = (
+            g_state.brakeOn                             /* We want the brake ON */
+        &&  g_state.pressure                            /* We failed to RELEASE pressure */
+        );
+
+        bool lowPressure = (
+            !g_state.brakeOn                            /* We want the brake OFF */
+        &&  !g_state.pressure                           /* We failed to BUILD pressure */
+        );
+
+        pressureFault = ( 
+            highPressure                                /* We failed to apply the brake */
+        ||  lowPressure                                 /* We failed to release the brake */
+        );
+
+        if( pressureFault
         ) {
             motorStop();                                // We stop going places, to avoid making things worse
             g_ops.wantAid = true;                       // We take ownership of our need for help
             pressureFault = true;
             
-            if( !g_ops.wantBrakeOn                      /* We were unaware of our need to apply the brake */
+            if( highPressure                            /* We failed to apply the brake */
+            &&  !g_ops.wantBrakeOn                      /* We were unaware of our failure */
             ) {
                 mqttPublishAlert(&ALERT_PRESSURE_HIGH); // We expose this treachery!
                 statusUpdate(STATUS_PRESSURE_HIGH);     // We expose it ALL!
-                g_ops.wantBrakeOn = true;               // We yearn to be less high
+                g_ops.wantBrakeOn = true;               // We yearn to be held
             }
-        }
 
-        else
-        if( !g_state.brakeOn                            /* We want to release the brake */
-        &&  !g_state.pressure                           /* We have no pressure, though we want it all! */
-        ) {
-            motorStop();                                // We stop going places, to avoid making things worse
-            g_ops.wantAid = true;                       // We take ownership of our need for help
-            pressureFault = true;
-            
-            if( !g_ops.wantBrakeOff                     /* We were unaware of our need to release the brake */
+            if( lowPressure                             /* We failed to release the brake */
+            &&  !g_ops.wantBrakeOff                     /* We were unaware of our failure */
             ) {
                 mqttPublishAlert(&ALERT_PRESSURE_LOW);  // We expose this treachery!
                 statusUpdate(STATUS_PRESSURE_LOW);      // We expose it ALL!
-                g_ops.wantBrakeOff = true;              // We yearn to be less high
+                g_ops.wantBrakeOff = true;              // We yearn for releas
             }
         }
 
-        else                                          
-        if( g_state.brakeOn                             /* We tried to apply the brake */
-        &&  !g_state.pressure                           /* We succeeded */
+        else                                            /* Whatever we tried to do re. the brake, succeeded */
+        if( g_ops.wantBrakeOn                           /* Still we yearn to be held */
+        ||  g_ops.wantBrakeOff                          /* Still we yearn for release */
         ) { 
             g_ops.wantBrakeOn = false;                  // We stop yearning to be held, lest we appear soft!
-            g_state.brakeTimeout = false;
-            pressureFault = false;
+            g_ops.wantBrakeOff = false;                 // We stop yearning for release, lest we appear pervs!
             statusUpdate((char*)"...");
         }
-        
-        else                                          
-        if( !g_state.brakeOn                            /* We tried to release the brake */
-        &&  g_state.pressure                            /* We succeeded */
-        ) { 
-            g_ops.wantBrakeOff = false;                 // We stop yearning for sobriety, lest we appear soft!
-            g_state.brakeTimeout = false;
-            pressureFault = false;
-            statusUpdate((char*)"...");
-        }
+
+        else
+            g_state.brakeTimeout = false;               // We don't need to come back here until the timer runs again
     }
     
-
     return pressureFault;
 }
 
@@ -292,6 +304,7 @@ bool isOperatingFaultCondition() {
     if( isEStopPressed()                        /* We yearn for the system to be enabled */
     ||  isDoorOpen()                            /* We yearn for the door to close */
     ||  isTopLimitFault()                       /* We yearn to be less high... of fist */
+    ||  isHomeLimitFault()                      /* We yearn for the hammer and / or anvil */
     ||  isPressureFault()                       /* We yearn for appropriate brake pressure */
     ||  isAidRequired()                         /* We yearn for assistance */
     ||  isConfigRequired()                      /* We yearn for purpose */
@@ -302,9 +315,9 @@ bool isOperatingFaultCondition() {
 
 void checkDiagnostics() {
 
-    if( g_state.eStop
-    ||  g_state.topLimit
-    ||  g_state.homeLimit 
+    if( isEStopPressed() 
+    ||  isTopLimitFault()
+    ||  isHomeLimitFault() 
     ||  isPressureFault()                      
     )   motorStop();
     
@@ -340,7 +353,7 @@ void doPositionUpdate() {
 }
 
 
-Alert ALERT_HAMMER_LOST("failed to find the hammer", ERROR);
+Alert ALERT_HAMMER_LOST("failed to find the hammer", "and we were like totally looking for it", ERROR);
 /* Called by doGoHome()
 Sets g_ops.seekHammer = false once we secure the hammer 
 Returns an error if we fail to secure the hammer */
@@ -378,7 +391,7 @@ Alert* doSeekHammer() {
     return nullptr;
 }
 
-Alert ALERT_ANVIL_LOST("failed to find the anvil", ERROR);
+Alert ALERT_ANVIL_LOST("failed to find the anvil", "and we were like totally looking for it", ERROR);
 /* Called by doGoHome()
 Sets g_ops.seekAnvil = false once we find the anvil 
 Returns an error if we fail to find the anvil */
@@ -415,7 +428,7 @@ Alert* doSeekAnvil() {
     return nullptr;
 }
 
-Alert ALERT_HOME_LOST("failed to find home", ERROR);
+Alert ALERT_HOME_LOST("failed to find home", "and we were like totally looking for it", ERROR);
 /* Called by doGoHome()  
 Sets g_ops.seekHome = false once we find home 
 Returns an error if we fail to find home*/
@@ -453,7 +466,8 @@ Alert* doSeekHome() {
     return nullptr;
 }
 
-Alert ALERT_OPS_COMPLET("2chainz claims victory", SUCCES);
+Alert ALERT_OPS_STEP_ERROR("2Chainz is lost", "reached target distance without finding home", ERROR);
+Alert ALERT_OPS_COMPLET("2Chainz claims victory", "all drops have been completed", SUCCES);
 /* Called by runOperations() when: 
 - the previous target was reached
 - and g_ops.goHome is set 
@@ -472,8 +486,6 @@ Alert* doGoHome() {
     &&  g_state.homeLimit
     ) {
         motorStop();                                // Stop moving
-
-        /* TODO: CHECK STEP ERROR */
         
         motorSetPositionAsZero();                   // Reset our home position
         g_ops.seekHammer = false;
@@ -544,7 +556,7 @@ Alert* doRaiseHammer() {
     return nullptr;
 }
 
-Alert ALERT_HAMMERTIME_OUT("the hammer did not strike the anvil");
+Alert ALERT_HAMMERTIME_OUT("the hammer did not strike the anvil", "and we like totally dropped it", ERROR);
 /* Called by runOperations() when:
 - the previous target was reached
 - and g_ops.dropHammer is set 
