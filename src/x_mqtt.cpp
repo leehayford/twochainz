@@ -77,18 +77,23 @@ void mqttHandleCMDDisableDiagnostics(char* msg) {
     mqttHandleCMDReport(msg); 
 }
 
+void diagnosticReoprt() {
+    setMQTTPubFlag(PUB_STATE);
+    setMQTTPubFlag(PUB_OPS);
+}
+
 void mqttHandleCMDBrakeOn(char* msg) { 
     if( g_ops.diagnosticMode
     ) {
         brakeOn();
-        // mqttHandleCMDReport(msg);
+        diagnosticReoprt();
     }
 }
 void mqttHandleCMDBrakeOff(char* msg) { 
     if( g_ops.diagnosticMode
     ) {
         brakeOff();
-        // mqttHandleCMDReport(msg);
+        diagnosticReoprt();
     }
 }
 
@@ -96,14 +101,14 @@ void mqttHandleCMDMagnetOn(char* msg) {
     if( g_ops.diagnosticMode
     ) {
         magnetOn();
-        // mqttHandleCMDReport(msg);
+        diagnosticReoprt();
     }
 }
 void mqttHandleCMDMagnetOff(char* msg) { 
     if( g_ops.diagnosticMode
     ) {
         magnetOff();
-        // mqttHandleCMDReport(msg);
+        diagnosticReoprt();
     }
 }
 
@@ -112,14 +117,14 @@ void mqttHandleCMDMoveUp(char* msg) {
     if( g_ops.diagnosticMode
     ) {
         diagnosticMove(true);
-        // mqttHandleCMDReport(msg);
+        diagnosticReoprt();
     }
 }
 void mqttHandleCMDMoveDown(char* msg) { 
     if( g_ops.diagnosticMode
     ) {
         diagnosticMove(false);
-        // mqttHandleCMDReport(msg);
+        diagnosticReoprt();
     }
 }
 void diagnosticMove(bool up) {
@@ -138,7 +143,7 @@ void mqttHandleCMDMotorStop(char* msg) {
     if( g_ops.diagnosticMode
     ) {
         motorStop();
-        // mqttHandleCMDReport(msg);
+        diagnosticReoprt();
     }
 }
 
