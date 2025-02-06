@@ -3,7 +3,7 @@
 void statusUpdate(const char* status_msg) {
     // Serial.printf("\nstatusUpdate(%s)", status_msg);
     g_ops.setStatus(status_msg);
-    // setMQTTPubFlag(PUB_CONFIG);
+    setMQTTPubFlag(PUB_CONFIG);
     setMQTTPubFlag(PUB_STATE);
     setMQTTPubFlag(PUB_OPS);
 }
@@ -282,7 +282,7 @@ bool isAidRequired() {
 Returns true until a valid configuration is receved */
 bool isConfigRequired() {
 
-    if( !g_config.validate()                    /* We lack clear attainable goals */
+    if( !g_config.isValid()                    /* We lack clear attainable goals */
     ) {
         if( !g_ops.wantConfig                   /* We were unaware of this personal failing */
         )  statusUpdate(STATUS_WANT_CONFIG);    // We fall to our knees, arms wide, fists clenched, and shout to he heavens, "WHAT DO YOU WANT FROM US!?"
@@ -325,8 +325,8 @@ void checkDiagnostics() {
     )   motorStop();
     
     else
-    if( !motorTargetReached() 
-    )   doPositionUpdate();
+        doPositionUpdate();
+
 }
 
 /* FAULT CHECKS *** END *******************************************************************************/
@@ -347,7 +347,7 @@ If position update period has passed:
 void doPositionUpdate() {  
 
     if( millis() > nextPosUpdate                /* The time has come to publish our position */    
-    ||  motorTargetReached()                    /* We want to tell everyone we have reached our target */
+    // ||  motorTargetReached()                    /* We want to tell everyone we have reached our target */
     ) {
         motorGetPosition();                     // Check our position
         setMQTTPubFlag(PUB_OPS_POS);            // Sing it
@@ -361,6 +361,7 @@ Alert ALERT_HAMMER_LOST("failed to find the hammer", "and we were like totally l
 Sets g_ops.seekHammer = false once we secure the hammer 
 Returns an error if we fail to secure the hammer */
 Alert* doSeekHammer() { 
+    // Serial.println("doSeekHammer()...");
 
     if( g_state.fistLimit                       /* We found the hammer */
     ) { 
@@ -399,6 +400,7 @@ Alert ALERT_ANVIL_LOST("failed to find the anvil", "and we were like totally loo
 Sets g_ops.seekAnvil = false once we find the anvil 
 Returns an error if we fail to find the anvil */
 Alert* doSeekAnvil() {
+    // Serial.println("doSeekAnvil()...");
 
     if( g_state.anvilLimit                      /* We found the anvil */
     ) { 
@@ -436,6 +438,7 @@ Alert ALERT_HOME_LOST("failed to find home", "and we were like totally looking f
 Sets g_ops.seekHome = false once we find home 
 Returns an error if we fail to find home*/
 Alert* doSeekHome() {
+    // Serial.println("doSeekHome()...");
         
     if( g_state.homeLimit                       /* We found home */
     ) {     
@@ -483,7 +486,8 @@ Returns an alert
     - upon completion of the required cycles 
     - where positional error exceeds the max */
 Alert* doGoHome() {
-    
+    // Serial.println("doGoHome()...");
+
     if( g_state.fistLimit
     &&  g_state.anvilLimit
     &&  g_state.homeLimit
@@ -506,7 +510,7 @@ Alert* doGoHome() {
         
         else {
             // Our quest has ended.
-            g_config.run = false;                   // We stop seeking either glory or ruin, lest we look like fools!
+            g_ops.run = false;                      // We stop seeking either glory or ruin, lest we look like fools!
             g_ops.stepTarget = 0;                   // We have taken every step
             brakeOn();                              // We feel a release of pressure
             magnetOff();                            // We let the hammer rest
@@ -620,6 +624,10 @@ Alert* runOperations() {
 
     if( isOperatingFaultCondition()             /* We have a fault condition */
     )   return nullptr;                         // We go no further... 
+
+    if( !g_ops.run                              /* We have yet to be set loose */
+    ||  g_ops.pause                             /* We have been told to pause */
+    )   return nullptr;
 
     // We have work to do and the freedome to do it
 

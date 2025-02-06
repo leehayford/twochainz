@@ -23,9 +23,10 @@ private:
     const char* currentHeightKey = "\"current_height\":";
 
     const char* hammerTimeoutKey = "\"hammer_timeout\":";
-    const char* interruptFlagKey = "\"interrupt_flag\":";
     const char* brakeTimeoutKey = "\"brake_timeout\":";
     
+    const char* stateChangeFlagKey = "\"state_change_flag\":";
+
     char jsonOut[MQTT_PUB_BUFFER_SIZE];
 
 public:
@@ -46,8 +47,9 @@ public:
     float currentHeight;
 
     bool hammerTimeout;
-    bool interruptFlag;
     bool brakeTimeout;
+
+    bool stateChangeFlag;
 
     State() {
         eStop = false;
@@ -65,8 +67,9 @@ public:
         currentHeight = 0.0;
 
         hammerTimeout = false;
-        interruptFlag = false;
         brakeTimeout = false;
+        
+        stateChangeFlag = false;
     }
 
     /* MAKE READ ONLY AFTER DEBUG */
@@ -86,8 +89,9 @@ public:
     //     jsonParseFloat(jsonString, currentHeightKey, currentHeight);
 
     //     jsonParseBool(jsonString, hammerTimeoutKey, hammerTimeout);
-    //     jsonParseBool(jsonString, interruptFlagKey, interruptFlag);
     //     jsonParseBool(jsonString, brakeTimeoutKey, brakeTimeout);
+    
+    //     jsonParseBool(jsonString, stateChangeFlagKey, stateChangeFlag);
     // }
     
     char* serializeToJSON() {
@@ -107,9 +111,10 @@ public:
         jsonSerializeInt(jsonOut, motorStepsKey, motorSteps);
         jsonSerializeFloat(jsonOut, currentHeightKey, currentHeight);
 
-        jsonSerializeBool(jsonOut, hammerTimeoutKey, hammerTimeout); 
-        jsonSerializeBool(jsonOut, interruptFlagKey, interruptFlag); 
+        jsonSerializeBool(jsonOut, hammerTimeoutKey, hammerTimeout);  
         jsonSerializeBool(jsonOut, brakeTimeoutKey, brakeTimeout); 
+        
+        jsonSerializeBool(jsonOut, stateChangeFlagKey, stateChangeFlag);
 
         jsonSerializeEnd(jsonOut);
         return jsonOut;

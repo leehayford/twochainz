@@ -90,15 +90,15 @@ public:
         motInchRev = ADMIN_MOT_REV_INCH;
         motStepsRev = ADMIN_MOT_REV_STEP;
 
-        motInchMax = ADMIN_MOT_MAX_INCH;            // 46.75" height of top limit
-        motStepsMax = getStepsFromInch(motInchMax);        // 46.75 / 6.0 * 2000 = 15583
+        motInchMax = ADMIN_MOT_MAX_INCH;                // 46.75" height of top limit
+        motStepsMax = getStepsFromInch(motInchMax);     // 46.75 / 6.0 * 2000 = 15583
 
-        motInchOver = 0.099;                // 0.099" distance to overshoot when returning home
+        motInchOver = 0.099;                            // 0.099" distance to overshoot when returning home
         motStepsOver = getStepsFromInch(motInchOver);   // 0.099 / 6.0 * 2000 = 33              
 
         /* Diagnostic */
-        diagInch = 0.002;                      // 0.002" default "jog" distance
-        diagSteps = getStepsFromInch(diagInch);   // 0.002 / 6.0 * 2000 = 4
+        diagInch = 0.002;                               // 0.002" default "jog" distance
+        diagSteps = getStepsFromInch(diagInch);         // 0.002 / 6.0 * 2000 = 4
     }
 
     /* called during parseFromJSON(...) */

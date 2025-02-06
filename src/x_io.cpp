@@ -127,7 +127,10 @@ void setupHammerTimer() {
 
     timerAttachInterrupt(
         tmrHammerStrike,
-        [](){ g_state.hammerTimeout = true; },
+        [](){ 
+            g_state.hammerTimeout = true; 
+            g_state.stateChangeFlag = true;
+        },
         OPS_HAMMER_TIMER_EDGE
     );
 
@@ -164,7 +167,10 @@ void setupBrakeTimer() {
 
     timerAttachInterrupt(
         tmrBrakePressure,
-        [](){ g_state.brakeTimeout = true; },
+        [](){ 
+            g_state.brakeTimeout = true;  
+            g_state.stateChangeFlag = true;
+        },
         OPS_BRAKE_TIMER_EDGE
     );
 
@@ -243,8 +249,10 @@ void motorGetPosition() {
 }
 
 void motorSetPositionAsZero() {
-
+    // Serial.printf("motorSetPositionAsZero() dist 2 target -> BEFORE: %d ", m_motor.getDistanceToTargetSigned());
     m_motor.setCurrentPositionInSteps(0);
+    m_motor.setTargetPositionRelativeInSteps(0);
+    // Serial.printf("motorSetPositionAsZero() dist 2 target -> AFTER: %d", m_motor.getDistanceToTargetSigned());
     motorGetPosition();
 }
 

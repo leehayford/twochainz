@@ -104,7 +104,7 @@ public:
             checkPin();                         // What is the actual pin state?
 
             if( bPrevState != *pbPinState       /* The pin state changed */
-            )   g_state.interruptFlag = true;   //g_ui32InterruptFlag = 1;        // Ring the bell!
+            )   g_state.stateChangeFlag = true;   // Ring the bell!
             
             checkTime = 0;                      // Reset the time / flag
         }

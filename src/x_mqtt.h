@@ -6,6 +6,9 @@
 #include "x_models.h"
 #include "x_io.h"
 
+/* MQTT Pubclications *************************************************************************************/
+
+#define N_PUBS 6
 
 typedef enum  {
     PUB_ERROR = 0,
@@ -18,7 +21,6 @@ typedef enum  {
 
 extern void setMQTTPubFlag(eMqttPubMap_t pub);
 
-#define N_PUBS 6
 
 extern void mqttPublishAlert(Alert* alert);
 
@@ -31,10 +33,15 @@ void mqttPublishConfig();
 void mqttPublishOps(); 
 
 // Publishes Ops.currentHeight only (float inches)  
-void mqttPublishOpsPosition();  
+void mqttPublishOpsPosition();
+
+/* MQTT Pubclications *** END *****************************************************************************/  
 
 
-#define N_SUBS 18
+
+/* MQTT Subscriptions *************************************************************************************/
+
+#define N_SUBS 21
 /* Message IGNORED 
 Sets MQTT publish flags: 
 - Admin
@@ -94,6 +101,12 @@ Sets MQTT publish flags:
 - Ops */ 
 void mqttHandleCMDOpsReset(char* msg);
 
+/* Message IGNORED ... */
+void mqttHandleCMDOpsRun(char* msg);
+
+/* Message IGNORED ... */
+void mqttHandleCMDOpsPause(char* msg);
+
 /* Message IGNORED 
 Clears Ops.wantAid flag
 Previous operation resumes 
@@ -102,7 +115,6 @@ Sets MQTT publish flags:
 - State
 - Ops */ 
 void mqttHandleCMDOpsContinue(char* msg);
-
 
 /* DIAGNOSTIC COMMANDS ****************************************************************/
 
@@ -121,18 +133,23 @@ void mqttHandleCMDMagnetOn(char* msg);
 /* Message IGNORED */
 void mqttHandleCMDMagnetOff(char* msg);
 
-/* Message IGNORED */
-void mqttHandleCMDMotorStop(char* msg);
-
 /* Message IGNORED 
-Moves 0.9° UP @ default low speed */
+    - Calls diagnosticMove(true)
+    - Moves UP g_admin.diagSteps @ g_admin.motHzLow */
 void mqttHandleCMDMoveUp(char* msg);
 /* Message IGNORED 
-Moves 0.9° DOWN @ default low speed */
+    - Calls diagnosticMove(false)
+    - Moves DOWN g_admin.diagSteps @ g_admin.motHzLow */
 void mqttHandleCMDMoveDown(char* msg);
-void diagnosticMove(bool up);
+
+/* Message IGNORED */
+void mqttHandleCMDMotorStop(char* msg);
+/* Message IGNORED */
+void mqttHandleCMDMotorZero(char* msg);
 
 /* END DIAGNOSTIC COMMANDS ************************************************************/
+
+/* MQTT Subscriptions *** END *****************************************************************************/
 
 
 extern void mqttCallBack_X(char* topic, byte* message, unsigned int length);

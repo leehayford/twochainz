@@ -1,10 +1,9 @@
 #include "x_mqtt.h"
 
-
 /* MQTT Pubclications *************************************************************************************/
 
 mqttPublication m_mqttPubs[N_PUBS] = {
-    {"error", 0, (mqttPubFunc)&mqttPublishAlert},
+    {"alert", 0, (mqttPubFunc)&mqttPublishAlert},
     {"admin", 0, (mqttPubFunc)&mqttPublishAdmin},
     {"state", 0, (mqttPubFunc)&mqttPublishState},
     {"config", 0, (mqttPubFunc)&mqttPublishConfig},
@@ -66,7 +65,112 @@ void setMQTTPubFlag(eMqttPubMap_t pub) {
 
 /* MQTT Subscriptions *************************************************************************************/
 
+
+mqttSubscription m_mqttSubs[N_SUBS] = {
+
+    {"report", (mqttCMDFunc)&mqttHandleCMDReport},
+    {"admin", (mqttCMDFunc)&mqttHandleCMDAdmin},
+    {"admin/set_def", (mqttCMDFunc)&mqttHandleCMDAdminSetDefaults},
+    {"admin/get_def", (mqttCMDFunc)&mqttHandleCMDAdminGetDefaults},
+    {"state", (mqttCMDFunc)&mqttHandleCMDState},
+    {"config", (mqttCMDFunc)&mqttHandleCMDConfig},
+
+    {"ops", (mqttCMDFunc)&mqttHandleCMDOps},
+    {"ops/reset", (mqttCMDFunc)&mqttHandleCMDOpsReset},
+    {"ops/run", (mqttCMDFunc)&mqttHandleCMDOpsRun},
+    {"ops/pause", (mqttCMDFunc)&mqttHandleCMDOpsPause},
+    {"ops/continue", (mqttCMDFunc)&mqttHandleCMDOpsContinue},
+
+    {"diag/enable", (mqttCMDFunc)&mqttHandleCMDEnableDiagnostics},
+    {"diag/disable", (mqttCMDFunc)&mqttHandleCMDDisableDiagnostics},
+
+    {"diag/brake_on", (mqttCMDFunc)&mqttHandleCMDBrakeOn},
+    {"diag/brake_off", (mqttCMDFunc)&mqttHandleCMDBrakeOff},
+
+    {"diag/magnet_on", (mqttCMDFunc)&mqttHandleCMDMagnetOn},
+    {"diag/magnet_off", (mqttCMDFunc)&mqttHandleCMDMagnetOff},
+
+    {"diag/move_up", (mqttCMDFunc)&mqttHandleCMDMoveUp},
+    {"diag/move_down", (mqttCMDFunc)&mqttHandleCMDMoveDown},
+    {"diag/motor_stop", (mqttCMDFunc)&mqttHandleCMDMotorStop},
+    {"diag/motor_zero", (mqttCMDFunc)&mqttHandleCMDMotorZero},
+    
+};
+
+void mqttHandleCMDReport(char* msg) {
+    setMQTTPubFlag(PUB_ADMIN);
+    setMQTTPubFlag(PUB_CONFIG);
+    setMQTTPubFlag(PUB_STATE);
+    setMQTTPubFlag(PUB_OPS);
+}
+
+/* Admin */
+void mqttHandleCMDAdmin(char* msg) {
+    validateAdminSettings(msg);
+    setMQTTPubFlag(PUB_ADMIN);
+}
+void mqttHandleCMDAdminSetDefaults(char* msg) {
+    validateAdminSettings(msg);
+    writeAdminSettingsToFile();
+}
+void mqttHandleCMDAdminGetDefaults(char* msg) {
+    readAdminSettingsFromFile();
+    setMQTTPubFlag(PUB_ADMIN);
+}
+
+/* State */
+void mqttHandleCMDState(char* msg) { 
+    setMQTTPubFlag(PUB_STATE);
+}
+
+/* Config */
+void mqttHandleCMDConfig(char* msg) {
+    g_config.parseFromJSON(msg); 
+    g_ops.clearProgress();  
+    setMQTTPubFlag(PUB_CONFIG);
+    setMQTTPubFlag(PUB_OPS);
+}
+
+/* ops */
+void mqttHandleCMDOps(char* msg) {
+    setMQTTPubFlag(PUB_OPS);
+}
+
+void mqttHandleCMDOpsReset(char* msg) {
+    g_config.resetConfig();                    
+    g_ops.resetOps();    
+
+    mqttHandleCMDReport(msg);           // And if they don't know, now they know
+}
+
+void mqttHandleCMDOpsRun(char* msg) {
+    if( g_config.isValid()              /* Our configuration is valid */
+    ) {  
+        g_ops.runOps();                 // We begin / resume our quest
+        g_ops.setStatus("running...");
+    }
+
+    mqttHandleCMDReport(msg);           // And if they don't know, now they know
+}
+
+void mqttHandleCMDOpsPause(char* msg) {
+    g_ops.pauseOps();                   /* Unconditionally we pause */
+
+    mqttHandleCMDReport(msg);           // And if they don't know, now they know
+}
+
+void mqttHandleCMDOpsContinue(char* msg) {
+    g_ops.continueOps();                /* Unconditionally we pause */
+
+    mqttHandleCMDReport(msg);           // And if they don't know, now they know
+}
+
 /* DIAGNOSTIC COMMANDS ****************************************************************/
+
+void diagnosticReoprt() {
+    setMQTTPubFlag(PUB_STATE);
+    setMQTTPubFlag(PUB_OPS);
+}
 
 void mqttHandleCMDEnableDiagnostics(char* msg) { 
     g_ops.diagnosticMode = true; 
@@ -75,11 +179,6 @@ void mqttHandleCMDEnableDiagnostics(char* msg) {
 void mqttHandleCMDDisableDiagnostics(char* msg) { 
     g_ops.diagnosticMode = false;
     mqttHandleCMDReport(msg); 
-}
-
-void diagnosticReoprt() {
-    setMQTTPubFlag(PUB_STATE);
-    setMQTTPubFlag(PUB_OPS);
 }
 
 void mqttHandleCMDBrakeOn(char* msg) { 
@@ -112,7 +211,15 @@ void mqttHandleCMDMagnetOff(char* msg) {
     }
 }
 
+void diagnosticMove(bool up) {
 
+    motorGetPosition(); 
+    motorSetSpeed(g_admin.motHzLow);        
+    motorSetCourse((up 
+        ? g_admin.diagSteps             // move UP (+)  
+        : g_admin.diagSteps * -1        // move DOWN (-) 
+    ));
+}
 void mqttHandleCMDMoveUp(char* msg) { 
     if( g_ops.diagnosticMode
     ) {
@@ -127,17 +234,6 @@ void mqttHandleCMDMoveDown(char* msg) {
         diagnosticReoprt();
     }
 }
-void diagnosticMove(bool up) {
-
-    motorSetSpeed(g_admin.motHzLow);
-    motorGetPosition();         
-
-    // Serial.printf("\nCurrent position: %d\n", g_state.motorSteps);
-    int32_t course = (up ? g_admin.diagSteps : g_admin.diagSteps * -1 );
-    // Serial.printf("\nMoving: %d\n", course);
-
-    motorSetCourse(course);
-}
 
 void mqttHandleCMDMotorStop(char* msg) { 
     if( g_ops.diagnosticMode
@@ -146,88 +242,16 @@ void mqttHandleCMDMotorStop(char* msg) {
         diagnosticReoprt();
     }
 }
-
+void mqttHandleCMDMotorZero(char* msg) {
+    if( g_ops.diagnosticMode
+    ) {
+        motorSetPositionAsZero();
+        diagnosticReoprt();
+    }
+}
 
 /* END DIAGNOSTIC COMMANDS ************************************************************/
 
-mqttSubscription m_mqttSubs[N_SUBS] = {
-
-    {"report", (mqttCMDFunc)&mqttHandleCMDReport},
-    {"admin", (mqttCMDFunc)&mqttHandleCMDAdmin},
-    {"admin/set_def", (mqttCMDFunc)&mqttHandleCMDAdminSetDefaults},
-    {"admin/get_def", (mqttCMDFunc)&mqttHandleCMDAdminGetDefaults},
-    {"state", (mqttCMDFunc)&mqttHandleCMDState},
-    {"config", (mqttCMDFunc)&mqttHandleCMDConfig},
-
-    {"ops", (mqttCMDFunc)&mqttHandleCMDOps},
-    {"ops/reset", (mqttCMDFunc)&mqttHandleCMDOpsReset},
-    {"ops/continue", (mqttCMDFunc)&mqttHandleCMDOpsContinue},
-
-    {"diag/enable", (mqttCMDFunc)&mqttHandleCMDEnableDiagnostics},
-    {"diag/disable", (mqttCMDFunc)&mqttHandleCMDDisableDiagnostics},
-
-    {"diag/brake_on", (mqttCMDFunc)&mqttHandleCMDBrakeOn},
-    {"diag/brake_off", (mqttCMDFunc)&mqttHandleCMDBrakeOff},
-
-    {"diag/magnet_on", (mqttCMDFunc)&mqttHandleCMDMagnetOn},
-    {"diag/magnet_off", (mqttCMDFunc)&mqttHandleCMDMagnetOff},
-
-    {"diag/move_up", (mqttCMDFunc)&mqttHandleCMDMoveUp},
-    {"diag/move_down", (mqttCMDFunc)&mqttHandleCMDMoveDown},
-    {"diag/motor_stop", (mqttCMDFunc)&mqttHandleCMDMotorStop},
-    
-};
-
-
-void mqttHandleCMDReport(char* msg) {
-    setMQTTPubFlag(PUB_ADMIN);
-    setMQTTPubFlag(PUB_CONFIG);
-    setMQTTPubFlag(PUB_STATE);
-    setMQTTPubFlag(PUB_OPS);
-}
-
-/* Admin */
-void mqttHandleCMDAdmin(char* msg) {
-    validateAdminSettings(msg);
-    setMQTTPubFlag(PUB_ADMIN);
-}
-void mqttHandleCMDAdminSetDefaults(char* msg) {
-    validateAdminSettings(msg);
-    writeAdminSettingsToFile();
-}
-void mqttHandleCMDAdminGetDefaults(char* msg) {
-    readAdminSettingsFromFile();
-    setMQTTPubFlag(PUB_ADMIN);
-}
-
-/* State */
-void mqttHandleCMDState(char* msg) { 
-    setMQTTPubFlag(PUB_STATE);
-}
-
-/* Config */
-void mqttHandleCMDConfig(char* msg) {
-    g_config.parseFromJSON(msg); 
-    g_ops.clearProgress();
-    g_ops.goHome = true;   
-    mqttHandleCMDReport(msg);
-}
-
-/* ops */
-void mqttHandleCMDOps(char* msg) {
-    setMQTTPubFlag(PUB_OPS);
-}
-
-void mqttHandleCMDOpsReset(char* msg) {
-    g_config.cmdReset();                    
-    g_ops.cmdReset();                       
-    mqttHandleCMDReport(msg);
-}
-
-void mqttHandleCMDOpsContinue(char* msg) {
-    g_ops.cmdContinue();
-    mqttHandleCMDReport(msg);
-}
 
 
 /* MQTT General Setup *************************************************************************************/
@@ -251,10 +275,10 @@ void setupMQTT_X(const char* mqttBrokerIP, int mqttBrokerPort) {
 
 void serviceMQTTClient_X(const char* user, const char* pw) {
     
-    if( g_state.interruptFlag //g_ui32InterruptFlag                     /* We have had a state change */
+    if( g_state.stateChangeFlag             /* We have had a hardware state change */
     ) {
-        setMQTTPubFlag(PUB_STATE);              // We tell all of our state change
-        g_state.interruptFlag = false; //g_ui32InterruptFlag = 0;                // We stop reacting to the state change, lest we look like fools!
+        g_state.stateChangeFlag = false;    // We stop reacting to the state change, lest we look like fools!
+        setMQTTPubFlag(PUB_STATE);          // We tell all of our state change
     }
 
     serviceMQTTClient(user, pw, m_mqttSubs, N_SUBS);

@@ -47,6 +47,8 @@ private:
     const char* dropHammerKey = "\"drop_hammer\":";
     const char* wantStrikeKey = "\"want_strike\":";
 
+    const char* runKey = "\"run\":";
+    const char* pauseKey = "\"pause\":";
     const char* cycleCountKey = "\"cycle_count\":";
     const char* stepTargetKey = "\"step_target\":";
     const char* stepHzKey = "\"step_hz\":";
@@ -81,6 +83,8 @@ public:
     bool dropHammer;
     bool wantStrike;
 
+    bool run;
+    bool pause;
     int cycleCount;
     int stepTarget;
     int stepHz;
@@ -90,8 +94,8 @@ public:
     Ops() {
         diagnosticMode = false;
 
-        cmdReset();
-
+        resetOps();
+    
         setStatus("initialized");
     }
  
@@ -127,21 +131,35 @@ public:
     }
 
     void clearProgress() {
+        goHome = true; 
         cycleCount = 0;
         stepTarget = 0;
         stepHz = 0;
     }
 
-    void cmdReset() {
+    void resetOps() {
         clearProgress();
         clearOpFlags();
         doReorientation();
+        run = false;
+        pause = false;
     }
 
-    void cmdContinue() { // Serial.printf("Ops.cmdContinue() :\n");
+    void runOps() {
+        run = true;
+        pause = false;
+    }
+
+    void pauseOps() {
+        pause = true;
+    }
+
+    void continueOps() {        // We had a fault and we are OK to continue
         clearOpFlags();
         doReorientation();
+        runOps();
     }
+
 
     /* MAKE READ ONLY AFTER DEBUG */
     // void parseFromJSON(const char* jsonString) {
@@ -168,6 +186,8 @@ public:
     //     jsonParseBool(jsonString, dropHammerKey, dropHammer);
     //     jsonParseBool(jsonString, wantStrikeKey, wantStrike);
 
+    //     jsonParseBool(jsonString, runKey, run);
+    //     jsonParseBool(jsonString, pauseKey, pause);
     //     jsonParseInt(jsonString, cycleCountKey, cycleCount);
     //     jsonParseInt(jsonString, stepTargetKey, stepTarget);
     //     jsonParseInt(jsonString, stepHzKey, stepHz);
@@ -201,6 +221,8 @@ public:
         jsonSerializeBool(jsonOut, dropHammerKey, dropHammer);
         jsonSerializeBool(jsonOut, wantStrikeKey, wantStrike);
 
+        jsonSerializeBool(jsonOut, runKey, run);
+        jsonSerializeBool(jsonOut, pauseKey, pause);
         jsonSerializeInt(jsonOut, cycleCountKey, cycleCount);
         jsonSerializeInt(jsonOut, stepTargetKey, stepTarget);
         jsonSerializeInt(jsonOut, stepHzKey, stepHz);

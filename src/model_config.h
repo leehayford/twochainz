@@ -11,53 +11,67 @@
 
 class Config {
 private:
-    const char* runKey = "\"run\":";
     const char* cyclesKey = "\"cycles\":";
     const char* heightKey = "\"height\":";
     
     char jsonOut[MQTT_PUB_BUFFER_SIZE];
 
 public:
-    bool run;
     int cycles;
     float height; 
     int steps;
     
-    Config(
-        bool r=false,
-        int cyc=0, 
-        float ht=0.0 
-    ) {
-        run = r;
-        cycles = cyc;
-        height = ht;
+    Config() {
+        cycles = 0;
+        height = 0.0;
     }
     
-    bool validate() {
+    bool isValid() {
         return ( 
-            run                                 /* We have been told to run */
-        &&  cycles > 0                          /* We have a valid cycle setting */
+            cycles > 0                          /* We have a valid cycle setting */
         &&  height > 0
         &&  height > 0                          /* We have a valid height setting */
         &&  height < FIST_HEIGHT_MAX_INCH       
         );
     }
 
-    void cmdReset() {
-        run = false;
+    int validateCyces(int qty) {
+        if( qty < 0                             /* We refuse to undo cycles */
+        )   qty = 0;                            
+
+        return qty;
+    }
+
+    float validateHeight(float inch) {
+
+        if( inch < 0                            /* The refuse to push through the anvli */
+        )   inch == 0.0;                        
+
+        if( inch > FIST_HEIGHT_MAX_INCH         /* We refuse to swing higher than this */
+        )   inch = FIST_HEIGHT_MAX_INCH;        
+
+        return inch;
+    }
+
+    void resetConfig() {
         cycles = 0;
         height = 0.0;
     }
     
     void parseFromJSON(const char* jsonString) {
-        jsonParseBool(jsonString, runKey, run);
-        jsonParseInt(jsonString, cyclesKey, cycles);
-        jsonParseFloat(jsonString, heightKey, height);
+
+        int qty = 0;
+        jsonParseInt(jsonString, cyclesKey, qty);
+        cycles = validateCyces(qty);
+
+        float inch = 0.0;
+        jsonParseFloat(jsonString, heightKey, inch);
+        height = validateHeight(inch);
+
     }
     
     char* serializeToJSON() {
         jsonSerializeStart(jsonOut);
-        jsonSerializeBool(jsonOut, runKey, run);
         jsonSerializeInt(jsonOut, cyclesKey, cycles);
         jsonSerializeFloat(jsonOut, heightKey, height);
         jsonSerializeEnd(jsonOut);
