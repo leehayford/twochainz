@@ -252,7 +252,10 @@ bool isPressureFault() {
         }
 
         else
+        {    
             g_state.brakeTimeout = false;               // We don't need to come back here until the timer runs again
+            statusUpdate((char*)"...");
+        }
     }
     
     return pressureFault;
