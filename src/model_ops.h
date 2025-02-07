@@ -157,7 +157,7 @@ public:
     void continueOps() {        // We had a fault and we are OK to continue
         clearOpFlags();
         doReorientation();
-        runOps();
+        pauseOps();
     }
 
 

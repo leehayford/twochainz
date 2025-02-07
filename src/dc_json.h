@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <cstring>
 #include <cstdlib> // For atof and atoi
-// #include <exception>
-// #include <stdexcept>
 
 #define btoa(x) ((x)?"true":"false")
 

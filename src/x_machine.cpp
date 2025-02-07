@@ -624,9 +624,9 @@ Alert* runOperations() {
 
     if( !g_ops.run                              /* We have yet to be set loose */
     ||  g_ops.pause                             /* We have been told to pause */
-    )   return nullptr;
+    )   return nullptr;                         // We go no further...
 
-    // We have work to do and the freedome to do it
+    // We have work to do and the freedom to do it
 
     if( g_ops.goHome                            /* We've been called home */
     )   return doGoHome();                      // All yearn for our return

@@ -4,8 +4,6 @@
 #include <Arduino.h>
 #include "dc_esp_server.h"
 #include "dc_json.h"
-// #include <exception>
-// #include <stdexcept>
 
 #define ADMIN_MOT_REV_INCH 6.0
 #define ADMIN_MOT_REV_STEP 2000

@@ -7,7 +7,6 @@
 #include "x_io.h"
 #include "x_mqtt.h"
 #include "x_machine.h"
-// #include <exception>
 
 #define SERIAL_BAUD 115200
 #define SERIAL_DELAY 500

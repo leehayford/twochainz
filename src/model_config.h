@@ -4,10 +4,7 @@
 #include <Arduino.h>
 #include "dc_esp_server.h"
 #include "dc_json.h"
-
-#define FIST_INCH_PER_REV 6.000
-#define FIST_HEIGHT_MAX_INCH 48.000
-#define FIST_HEIGHT_MAX_STEP 16000 // = ( 48 / 6 ) * 2000
+#include "model_admin.h"
 
 class Config {
 private:
@@ -19,7 +16,6 @@ private:
 public:
     int cycles;
     float height; 
-    int steps;
     
     Config() {
         cycles = 0;
@@ -31,7 +27,7 @@ public:
             cycles > 0                          /* We have a valid cycle setting */
         &&  height > 0
         &&  height > 0                          /* We have a valid height setting */
-        &&  height < FIST_HEIGHT_MAX_INCH       
+        &&  height < ADMIN_MOT_MAX_INCH     
         );
     }
 
@@ -47,8 +43,8 @@ public:
         if( inch < 0                            /* The refuse to push through the anvli */
         )   inch == 0.0;                        
 
-        if( inch > FIST_HEIGHT_MAX_INCH         /* We refuse to swing higher than this */
-        )   inch = FIST_HEIGHT_MAX_INCH;        
+        if( inch > ADMIN_MOT_MAX_INCH           /* We refuse to swing higher than this */
+        )   inch = ADMIN_MOT_MAX_INCH;       
 
         return inch;
     }
