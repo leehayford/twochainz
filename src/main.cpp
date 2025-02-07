@@ -7,6 +7,7 @@
 #include "x_io.h"
 #include "x_mqtt.h"
 #include "x_machine.h"
+// #include <exception>
 
 #define SERIAL_BAUD 115200
 #define SERIAL_DELAY 500
@@ -24,8 +25,6 @@ void setup() {
 
     setupMQTT_X(SECRET_MQTT_BROKER, SECRET_MQTT_PORT);
 
-    // deleteFile(ADMIN_DEFAULT_FILE); 
-
     setupIO();
 
 }
@@ -36,7 +35,7 @@ void loop() {
     Alert* alert = nullptr;
 
     if( g_ops.diagnosticMode
-    )   checkDiagnostics();
+    )   runDiagnosticMode();
 
     else 
         alert = runOperations();

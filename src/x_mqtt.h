@@ -21,6 +21,9 @@ typedef enum  {
 
 extern void setMQTTPubFlag(eMqttPubMap_t pub);
 
+extern void opsStatusReport(const char* status_msg);
+
+extern void diagnosticReoprt();
 
 extern void mqttPublishAlert(Alert* alert);
 

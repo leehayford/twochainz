@@ -6,11 +6,11 @@
 #include "dc_alert.h"
 #include "x_models.h"
 
-
 /* ADMIN SETTINGS *************************************************************************************/
 extern void writeAdminSettingsToFile();
-extern void readAdminSettingsFromFile();
+extern void validateAdminSettingsFile();
 extern void validateAdminSettings(char* data);
+extern void setupAdminSettingsFile();
 /* ADMIN SETTINGS *** END *****************************************************************************/
 
 

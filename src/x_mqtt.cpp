@@ -4,10 +4,13 @@
 
 mqttPublication m_mqttPubs[N_PUBS] = {
     {"alert", 0, (mqttPubFunc)&mqttPublishAlert},
+    
     {"admin", 0, (mqttPubFunc)&mqttPublishAdmin},
+    
     {"state", 0, (mqttPubFunc)&mqttPublishState},
+    
     {"config", 0, (mqttPubFunc)&mqttPublishConfig},
-
+    
     {"ops", 0, (mqttPubFunc)&mqttPublishOps},
     {"ops/pos", 0, (mqttPubFunc)&mqttPublishOpsPosition},
 };
@@ -40,14 +43,12 @@ void mqttPublishConfig() {
     publishMQTTMessage(pTopic, (char *)g_config.serializeToJSON()); 
 }
 
-
 void mqttPublishOps() { 
 
     char pTopic[MQTT_MAX_TOPIC] = SECRET_MQTT_DEVICE;
     mqttSIGBuilder(pTopic, m_mqttPubs[PUB_OPS].topic);
     publishMQTTMessage(pTopic, (char *)g_ops.serializeToJSON()); 
 }
-
 void mqttPublishOpsPosition() {
     char buffer[20]; 
     snprintf(buffer, sizeof(buffer), "%.8f", g_state.currentHeight);
@@ -57,11 +58,21 @@ void mqttPublishOpsPosition() {
     publishMQTTMessage(pTopic, buffer);
 }
 
-
 void setMQTTPubFlag(eMqttPubMap_t pub) {
     m_mqttPubs[pub].flag = 1;
 }
 
+void diagnosticReoprt() {
+    setMQTTPubFlag(PUB_STATE);
+    setMQTTPubFlag(PUB_OPS);
+}
+
+void opsStatusReport(const char* status_msg) { 
+    g_ops.setStatus(status_msg);
+    setMQTTPubFlag(PUB_CONFIG);
+    setMQTTPubFlag(PUB_STATE);
+    setMQTTPubFlag(PUB_OPS);
+}
 
 /* MQTT Subscriptions *************************************************************************************/
 
@@ -69,10 +80,13 @@ void setMQTTPubFlag(eMqttPubMap_t pub) {
 mqttSubscription m_mqttSubs[N_SUBS] = {
 
     {"report", (mqttCMDFunc)&mqttHandleCMDReport},
+    
     {"admin", (mqttCMDFunc)&mqttHandleCMDAdmin},
     {"admin/set_def", (mqttCMDFunc)&mqttHandleCMDAdminSetDefaults},
     {"admin/get_def", (mqttCMDFunc)&mqttHandleCMDAdminGetDefaults},
+    
     {"state", (mqttCMDFunc)&mqttHandleCMDState},
+    
     {"config", (mqttCMDFunc)&mqttHandleCMDConfig},
 
     {"ops", (mqttCMDFunc)&mqttHandleCMDOps},
@@ -92,6 +106,7 @@ mqttSubscription m_mqttSubs[N_SUBS] = {
 
     {"diag/move_up", (mqttCMDFunc)&mqttHandleCMDMoveUp},
     {"diag/move_down", (mqttCMDFunc)&mqttHandleCMDMoveDown},
+    
     {"diag/motor_stop", (mqttCMDFunc)&mqttHandleCMDMotorStop},
     {"diag/motor_zero", (mqttCMDFunc)&mqttHandleCMDMotorZero},
     
@@ -114,7 +129,7 @@ void mqttHandleCMDAdminSetDefaults(char* msg) {
     writeAdminSettingsToFile();
 }
 void mqttHandleCMDAdminGetDefaults(char* msg) {
-    readAdminSettingsFromFile();
+    validateAdminSettingsFile();
     setMQTTPubFlag(PUB_ADMIN);
 }
 
@@ -139,7 +154,7 @@ void mqttHandleCMDOps(char* msg) {
 void mqttHandleCMDOpsReset(char* msg) {
     g_config.resetConfig();                    
     g_ops.resetOps();    
-
+    motorStop();
     mqttHandleCMDReport(msg);           // And if they don't know, now they know
 }
 
@@ -155,7 +170,7 @@ void mqttHandleCMDOpsRun(char* msg) {
 
 void mqttHandleCMDOpsPause(char* msg) {
     g_ops.pauseOps();                   /* Unconditionally we pause */
-
+    motorStop();
     mqttHandleCMDReport(msg);           // And if they don't know, now they know
 }
 
@@ -166,11 +181,6 @@ void mqttHandleCMDOpsContinue(char* msg) {
 }
 
 /* DIAGNOSTIC COMMANDS ****************************************************************/
-
-void diagnosticReoprt() {
-    setMQTTPubFlag(PUB_STATE);
-    setMQTTPubFlag(PUB_OPS);
-}
 
 void mqttHandleCMDEnableDiagnostics(char* msg) { 
     g_ops.diagnosticMode = true; 

@@ -9,68 +9,101 @@ bool jsonParseSkipWhitespace(char c) {
     ||  c == '\t' 
     ||  c == '\r'
     )   return true;
-    
+
     return false;
 }
 
 const char* jsonParseSkipToValue(const char* jsonString, const char* key) {
-    // Skip past the key and the colon
-    const char* start = strstr(jsonString, key) + strlen(key); 
+    try {
+
+        // Skip past the key and the colon
+        const char* start = "";
+        if( strstr(jsonString, key)
+        )   start = strstr(jsonString, key) + strlen(key);
+        
+        else
+            throw -1;
+        
+        // skip any whitespace before the value
+        while(  jsonParseSkipWhitespace(*start)
+        )       start++;  
+        
+        return start;
     
-    // skip any whitespace before the value
-    while(  jsonParseSkipWhitespace(*start)
-    )       start++;  
-    
-    return start;
+    } catch (...) { 
+        Serial.printf("\n**** jsonParseSkipToValue ERROR : %s **** \n", key); 
+        throw -1;   
+    }
 }
 
 void jsonParseString(const char* jsonString, const char* key, char* destination, size_t maxLen) {
     
-    const char* start = jsonParseSkipToValue(jsonString, key);
-    
-    start++; // skip string opening quote
-    if( start
-    ) {
-        const char* end = strchr(start, '\"');
-        if(end
+    try {
+        const char* start = jsonParseSkipToValue(jsonString, key);
+        
+        start++; // skip string opening quote
+        if( start
         ) {
-            size_t len = end - start;
-            
-            if( len >= maxLen
-            )   len = maxLen - 1;
-            
-            strncpy(destination, start, len);
-            
-            destination[len] = '\0'; // Null-terminate
+            const char* end = strchr(start, '\"');
+            if(end
+            ) {
+                size_t len = end - start;
+                
+                if( len >= maxLen
+                )   len = maxLen - 1;
+                
+                strncpy(destination, start, len);
+                
+                destination[len] = '\0'; // Null-terminate
+            }
         }
+
+    } catch (...) { 
+        Serial.printf("\n**** jsonParseString ERROR **** \n"); 
+        throw -1;   
     }
 }
 
 void jsonParseInt(const char* jsonString, const char* key, int& destination) {
     
-    const char* start = jsonParseSkipToValue(jsonString, key);
-    
-    if( start
-    )   destination = atoi(start);
+    try {
+        const char* start = jsonParseSkipToValue(jsonString, key);
+        
+        if( start
+        )   destination = atoi(start);
 
+    } catch (...) { 
+        Serial.printf("\n**** jsonParseInt ERROR **** \n"); 
+        throw -1;   
+    }
 }
 
 void jsonParseFloat(const char* jsonString, const char* key, float& destination) {
     
-    const char* start = jsonParseSkipToValue(jsonString, key);
-    
-    if( start
-    )   destination = atof(start);
-    
+    try {
+        const char* start = jsonParseSkipToValue(jsonString, key);
+        
+        if( start
+        )   destination = atof(start);
+        
+    } catch (...) { 
+        Serial.printf("\n**** jsonParseFloat ERROR **** \n"); 
+        throw -1;   
+    }
 }
 
 void jsonParseBool(const char* jsonString, const char* key, bool& destination) {
     
-    const char* start = jsonParseSkipToValue(jsonString, key);
-    
-    if( start
-    )   destination = (strncmp(start, "true", 4) == 0); // true if it matches "true"
-    
+    try {
+        const char* start = jsonParseSkipToValue(jsonString, key);
+        
+        if( start
+        )   destination = (strncmp(start, "true", 4) == 0); // true if it matches "true"
+        
+    } catch (...) { 
+        Serial.printf("\n**** jsonParseBool ERROR **** \n"); 
+        throw -1;   
+    }
 }
 
 

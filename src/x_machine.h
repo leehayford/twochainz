@@ -7,9 +7,7 @@
 #include "x_mqtt.h"
 #include "x_io.h"
 
-extern void statusUpdate(const char* status_msg);
-
-extern void checkDiagnostics();
+extern void runDiagnosticMode();
 
 extern bool isOperatingFaultCondition();
 

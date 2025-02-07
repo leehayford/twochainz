@@ -8,19 +8,67 @@ void writeAdminSettingsToFile() {
 }
 
 void validateAdminSettings(char* data) {
+    // Serial.printf("\nvalidateAdminSettings ...\n");
+
+    try {
+
     g_admin.parseFromJSON(data);
+    } catch (...) { 
+        Serial.printf("\nvalidateAdminSettings : FAILED\n");
+        throw -1;
+    }
+
     changeHammerTimeoutPeriod();
     changeITRDebounceTimerPeriod();
     changeBrakeTimeoutPeriod();
+
+    Serial.printf("\nvalidateAdminSettings : OK\n");
 }
 
-void readAdminSettingsFromFile() {
+void validateAdminSettingsFile() {
+    // Serial.printf("\nvalidateAdminSettingsFile ...\n");
+
     if( !fileExists(ADMIN_DEFAULT_FILE)         /* This is the first time this ESP has been run */
-    )   writeAdminSettingsToFile();             // Create the default admin settings file 
-    
+    ) {  
+        Serial.printf("\nvalidateAdminSettingsFile -> file not found; creating...\n");
+        writeAdminSettingsToFile();             // Create the default admin settings file 
+    }
+    else
+        Serial.printf("\nvalidateAdminSettingsFile -> check existis : OK...\n");
+
     char data[MQTT_PUB_BUFFER_SIZE] = "";
     readFromFile(data, ADMIN_DEFAULT_FILE);
+
+    Serial.printf("\nvalidateAdminSettingsFile -> read from file : OK\n");
+
+    if( strlen(data)                        /* The string length of the file */
+    !=  strlen(g_admin.serializeToJSON())   /* The string length of model_admin (as defined currently)*/
+    ) {   
+        Serial.printf("\nvalidateAdminSettingsFile -> file length : %d : INVALID\n", strlen(data));
+        throw -1;                           // We refuse to load the file
+    }
+    Serial.printf("\nvalidateAdminSettingsFile -> file length : %d : OK\n", strlen(data));
+
+    try {
     validateAdminSettings(data);
+    } catch (...) { 
+        Serial.printf("\nvalidateAdminSettingsFile : FAILED\n");  
+        throw -1;
+    }
+    Serial.printf("\nvalidateAdminSettingsFile : OK\n\n");
+}
+
+void setupAdminSettingsFile() {
+    
+    try {                                   /* Try loading the default admin settings */
+        validateAdminSettingsFile();        
+    } 
+    catch (...) {                           /* The admin file in memory is invalid */
+        Serial.printf("\n\n******* DELETING INVALID ADMIN FILE *******\n\n");
+        deleteFile(ADMIN_DEFAULT_FILE);     // Destrot it, lest we look like fools!
+        
+        validateAdminSettingsFile();        // Save and load the model_admin (as defined currently) 
+    }
 }
 
 /* ADMIN SETTINGS *** END *****************************************************************************/
@@ -307,7 +355,8 @@ void setupIO() {
     itrpPressure.checkPin();
     doutBrake.checkPin();
     doutMagnet.checkPin();
+
+    setupAdminSettingsFile();
     
-    readAdminSettingsFromFile();
 }
 

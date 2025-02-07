@@ -60,14 +60,21 @@ public:
     
     void parseFromJSON(const char* jsonString) {
 
-        int qty = 0;
-        jsonParseInt(jsonString, cyclesKey, qty);
-        cycles = validateCyces(qty);
+        try {
+            int qty = 0;
+            jsonParseInt(jsonString, cyclesKey, qty);
+            cycles = validateCyces(qty);
 
-        float inch = 0.0;
-        jsonParseFloat(jsonString, heightKey, inch);
-        height = validateHeight(inch);
-
+            float inch = 0.0;
+            jsonParseFloat(jsonString, heightKey, inch);
+            height = validateHeight(inch);
+        
+        } catch (...) { 
+            Serial.printf("\nmodel_config.parseFromJSON : FAILED \n");    
+            throw -1;
+        }
+        
+        Serial.printf("\nmodel_config.parseFromJSON : OK\n");
     }
     
     char* serializeToJSON() {
