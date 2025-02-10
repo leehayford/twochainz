@@ -590,8 +590,10 @@ Alert* doDropHammer () {
     g_ops.wantStrike = false;                   // We stop yearning for the hammer strike, lest we look like fools!
   
     if( !g_state.anvilLimit                     /* The hammer has failed to strike */
-    )   return &ALERT_HAMMERTIME_OUT;           // We feel shame and confusion
-         
+    )   {
+        g_ops.wantAid = true;                       // We take ownership of our need for help
+        return &ALERT_HAMMERTIME_OUT;           // We feel shame and confusion
+    } 
     g_ops.cycleCount++;                         // Count it!
     g_ops.goHome = true;                        // We must go home
 

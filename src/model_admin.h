@@ -85,7 +85,7 @@ public:
     Admin() {
 
         /* Operations */          
-        opsTmrHammer_uSec = 500000;         // 0.5 seconds for hammer to drop
+        opsTmrHammer_uSec = 1000000;         // 1.0 seconds for hammer to drop
         opsTmrBrake_uSec = 300000;          // 0.3 seconds to pressure to build / drop 
         opsPosPeriod_mSec = 300;            // 0.3 seconds between position updates
 
@@ -93,7 +93,7 @@ public:
         ioTmrITRDeb_uSec = 2000;            // 0.002 seconds default debounce 
 
         motHzLow = 500; 
-        motHzHigh = 4000;
+        motHzHigh = 3500;
         motAccel = 4000;                    // Steps / sec / sec
         motDecel = 4000;                    // Steps / sec / sec
 

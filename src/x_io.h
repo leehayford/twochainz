@@ -235,7 +235,7 @@ extern void magnetOff();
 
 #define MOT_DIR_UP HIGH
 #define MOT_DIR_DOWN LOW
-#define MOT_SERVICE_CORE 0 // Which processor core onwhich to run the stepper service 
+#define MOT_SERVICE_CORE 1 // Which processor core onwhich to run the stepper service 
 
 extern void motorSetPositionAsZero();
 extern void motorGetPosition();
