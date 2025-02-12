@@ -161,6 +161,8 @@ void mqttHandleCMDOpsReset(char* msg) {
 void mqttHandleCMDOpsRun(char* msg) {
     if( g_config.isValid()              /* Our configuration is valid */
     ) {  
+        if( g_ops.cycleCount == g_config.cycles
+        )   g_ops.clearProgress();
         g_ops.runOps();                 // We begin / resume our quest
         g_ops.setStatus("running...");
     }
