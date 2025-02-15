@@ -44,7 +44,7 @@ void mqttPublishOpsPosition();
 
 /* MQTT Subscriptions *************************************************************************************/
 
-#define N_SUBS 21
+#define N_SUBS 23
 /* Message IGNORED 
 Sets MQTT publish flags: 
 - Admin
@@ -118,6 +118,13 @@ Sets MQTT publish flags:
 - State
 - Ops */ 
 void mqttHandleCMDOpsContinue(char* msg);
+
+/* Message IGNORED */
+void mqttHandleCMDEnableAWESMode(char* msg); 
+
+/* Message IGNORED */
+void mqttHandleCMDDisableAWESMode(char* msg);
+
 
 /* DIAGNOSTIC COMMANDS ****************************************************************/
 

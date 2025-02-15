@@ -94,6 +94,8 @@ mqttSubscription m_mqttSubs[N_SUBS] = {
     {"ops/run", (mqttCMDFunc)&mqttHandleCMDOpsRun},
     {"ops/pause", (mqttCMDFunc)&mqttHandleCMDOpsPause},
     {"ops/continue", (mqttCMDFunc)&mqttHandleCMDOpsContinue},
+    {"ops/en_awes", (mqttCMDFunc)&mqttHandleCMDEnableAWESMode},
+    {"ops/dis_awes", (mqttCMDFunc)&mqttHandleCMDDisableAWESMode},
 
     {"diag/enable", (mqttCMDFunc)&mqttHandleCMDEnableDiagnostics},
     {"diag/disable", (mqttCMDFunc)&mqttHandleCMDDisableDiagnostics},
@@ -182,6 +184,16 @@ void mqttHandleCMDOpsContinue(char* msg) {
     mqttHandleCMDReport(msg);           // And if they don't know, now they know
 }
 
+void mqttHandleCMDEnableAWESMode(char* msg) {
+    g_ops.awesMode = true;
+    g_config.cycles = 1;
+    mqttHandleCMDReport(msg);
+}
+
+void mqttHandleCMDDisableAWESMode(char* msg) {
+    g_ops.awesMode = false;
+    mqttHandleCMDReport(msg);
+}
 /* DIAGNOSTIC COMMANDS ****************************************************************/
 
 void mqttHandleCMDEnableDiagnostics(char* msg) { 

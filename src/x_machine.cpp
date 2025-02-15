@@ -470,7 +470,7 @@ Alert* doSeekHome() {
     return nullptr;
 }
 
-Alert ALERT_OPS_STEP_ERROR("2Chainz is lost", "reached target distance without finding home", ERROR);
+// Alert ALERT_OPS_STEP_ERROR("2Chainz is lost", "reached target distance without finding home", ERROR);
 Alert ALERT_OPS_COMPLET("2Chainz claims victory", "all drops have been completed", SUCCES);
 /* Called by runOperations() when: 
 - the previous target was reached
@@ -486,15 +486,27 @@ Returns an alert
 Alert* doGoHome() {
     // Serial.println("doGoHome()...");
 
-    if( g_state.fistLimit
+    bool isHomeProdMode = ( 
+        g_state.fistLimit
     &&  g_state.anvilLimit
     &&  g_state.homeLimit
+    );
+
+    bool isHomeAWESMode = ( 
+        g_ops.awesMode
+    &&  g_state.fistLimit
+    );
+
+
+    if( isHomeProdMode
+    ||  isHomeAWESMode
     ) {
         motorStop();                                // Stop moving
         
         motorSetPositionAsZero();                   // Reset our home position
         g_ops.seekHammer = false;
         g_ops.seekAnvil = false;
+        g_ops.seekHome = false;
         g_ops.goHome = false;                       // We stop going home, lest we look like fools!
         g_ops.reorient = false;                     // Clear the reorient flag (in case that's why we sought home)
         
@@ -524,10 +536,12 @@ Alert* doGoHome() {
 
     // else                                         /* With the hammer secure in our fist */
     if( !g_state.anvilLimit                         /* We yearn for the anvil */
+    &&  !g_ops.awesMode                             /* We are expected to seek the anvil */
     )   return doSeekAnvil();                              
 
     // else                                         /* With the hammer secure and the anvil found */
     if( !g_state.homeLimit                          /* We yearn for home */
+    &&  !g_ops.awesMode                             /* We are expected to seek home */
     )   return doSeekHome();                                
 
 

@@ -25,6 +25,7 @@
 class Ops {
 private:
     const char* diagnosticModeKey = "\"diagnostic_mode\":";
+    const char* awesModeKey = "\"awes_mode\":";
 
     const char* wantEStopReleaseKey = "\"want_estop_release\":";
     const char* wantDoorCloseKey = "\"want_door_close\":";
@@ -59,6 +60,7 @@ private:
 
 public:
     bool diagnosticMode;
+    bool awesMode;
 
     bool wantEStopRelease;
     bool wantDoorClose;
@@ -93,6 +95,7 @@ public:
 
     Ops() {
         diagnosticMode = false;
+        awesMode = false;
 
         resetOps();
     
@@ -164,6 +167,7 @@ public:
     /* MAKE READ ONLY AFTER DEBUG */
     // void parseFromJSON(const char* jsonString) {
     //     jsonParseBool(jsonString, diagnosticModeKey, diagnosticMode);
+    //     jsonParseBool(jsonString, awesModeKey, awesMode);
 
     //     jsonParseBool(jsonString, wantEStopReleaseKey, wantEStopRelease);
     //     jsonParseBool(jsonString, wantDoorCloseKey, wantDoorClose);
@@ -199,6 +203,7 @@ public:
         jsonSerializeStart(jsonOut);
 
         jsonSerializeBool(jsonOut, diagnosticModeKey, diagnosticMode);
+        jsonSerializeBool(jsonOut, awesModeKey, awesMode);
 
         jsonSerializeBool(jsonOut, wantEStopReleaseKey, wantEStopRelease);
         jsonSerializeBool(jsonOut, wantDoorCloseKey, wantDoorClose);
